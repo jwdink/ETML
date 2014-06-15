@@ -1,3 +1,8 @@
+%%
+% Read Structure From Text
+% Written by Winston Chang
+% Retrieved from http://wiki.stdout.org/matlabcookbook/File%20IO/Reading%20and%20writing%20structs%20to%20a%20file/
+%
 function theStructs = ReadStructsFromTextW(filename, delimiter)
 
     % Open the file
