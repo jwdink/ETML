@@ -12,3 +12,5 @@ This is a pre-release that is mostly for personal use, but the goal is to make t
 To make a new experiment within this framework, download this .git. Then, create a folder with stimuli and config files. Finally, run ETML.m and when prompted for a directory, point it to the folder with the config files. This second step will actually be explained in future releases, but for now, a helpful example experiment can be found at https://github.com/jwdink/GroundPlane_V2 .
 
 This script was originally based on Brock Ferguson's scripts for running studies on infants. See https://github.com/brockf/ORT
+
+Note: this has ONLY been tested on OS X
