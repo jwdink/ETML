@@ -206,7 +206,7 @@ try
     
     record_phases = eval(get_config('RecordingPhases'));
     
-    phases = unique( [stim_config_p.('Phase')] );
+    phases = unique( stim_config_p.('Phase') );
     
     this_phase = 0;
     while this_phase < length(phases)
@@ -281,13 +281,11 @@ try
     
 catch my_err
         
-    log_msg(my_err.message, 0);
-    log_msg(num2str([my_err.stack.line]), 0);
+    log_msg(my_err.message);
+    log_msg(num2str([my_err.stack.line]));
     
-    if exist('this_phase', 'var')
-        record_phases(this_phase) = 0; % any clean-up messages will not be sent to the ET, since it's no longer recording
-    end
-    
+    record_phases(this_phase) = 0; % any clean-up messages will not be sent to the ET, since it's no longer recording
+
     if ~strcmpi(my_err.message,'Experiment ended.')
         post_experiment(true);
     end
@@ -794,8 +792,7 @@ end
 
 %% FXN_post_experiment
     function post_experiment (aborted)
-        
-        log_msg('Experiment ended', 0);
+        log_msg('Experiment ended');
         
         ShowCursor();
         
@@ -861,7 +858,6 @@ end
             end
             
             % save session file
-            if ~exist('sessions', 'dir'); mkdir('sessions'); end;
             filename = [base_dir 'sessions/' subject_code '.txt'];
             log_msg(sprintf('Saving results file to %s',filename));
             WriteStructsToText(filename,results)
