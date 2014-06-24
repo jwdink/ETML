@@ -112,7 +112,7 @@ try
     if dummy_mode
         refresh_rate = [];
     else
-        refresh_rate = 75;
+        refresh_rate = get_config('RefreshRate');
     end
     if debug_mode
         res = [0, 0, resolution(1), resolution(2)];
@@ -477,11 +477,10 @@ end
         % Check 'blip' setting:
         blip = eval(trial_config.('Blip'));
         if sum(blip) && rand > .5 % on 50% of trials, don't do blip at all.
-            blip = 0;
+        %    blip = 0;
         end
             
         if blip
-            
             % make this a function, add in case-checking:
             [pathstr, filename, ext] = fileparts([base_dir trial_config.('Stimuli')]);
             stim_blip = [pathstr, '/blip/', filename, '_Blip' ext];
