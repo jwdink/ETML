@@ -482,11 +482,15 @@ end
             blip_time = rand(1) * (blip(2)-blip(1)) + blip(1); % random number between blip(1) & blip(2)
             blip_status = 0; % 0 = not started; 1 = in progress; -1 = completed
             log_msg(['On this trial, the blip will happen at ' num2str(blip_time) ' secs.']);
-            add_data('blip_time', blip_time);
+            if record_phases(this_phase)
+                add_data('blip_time', blip_time);
+            end
         else
             blip_time = NaN;
             blip_status = -1;
-            add_data('blip_time', 'NA');
+            if record_phases(this_phase)
+                add_data('blip_time', 'NA');
+            end
         end
         
         % Save for DV:
@@ -583,7 +587,7 @@ end
             blipfiles = {blipdirstr.name};
             
             b_i = ~cellfun(@isempty, strfind(blipfiles, filename) );
-            blipfile = blipfiles(b_i)
+            blipfile = blipfiles(b_i);
             
             stim_blip = [blipdir blipfile{1}];
 
@@ -597,9 +601,11 @@ end
         
         stim_path = trial_config.('Stimuli');
         
-        image = imread(stim_path);      % read in image file
-        save_img_for_dv(trial_index , trial_config);
-        draw_tex(image, trial_index, trial_config)   % draw to window
+        image = imread(stim_path);                                  % read in image file
+        tex = Screen('MakeTexture', wind, image, [], [], [], 1);    % make texture
+        draw_tex(tex, trial_index, trial_config)                    % draw to window
+        
+        save_img_for_dv(trial_index, trial_config);
         
         if dummy_mode
             % Draw Interest Areas
@@ -642,91 +648,59 @@ end
     end
 
 %% FXN_draw_tex
-    function draw_tex(img, trial_index, trial_config, save_to_dv)
+    function draw_tex(tex, trial_index, trial_config, save_to_dv)
 
+        % IMPORTANT: any tex made with Screen('MakeTexture') must have been
+        % created with textureOrientation = 1. See Screen('MakeTexture?')
+        
         if nargin < 4
             save_to_dv = 0;
         end
         
-        % tic
-        
         FlipX = trial_config.FlipX;
         FlipY = trial_config.FlipY;
-
-        if length(img) == 1
-            % if input is a texture pointer, draw it to screen
-            
-            if FlipX
-                x = -1;
-            else
-                x =  1;
-            end
-            
-            if FlipY
-                y = -1;
-            else
-                y =  1;
-            end
-
-            tex_rect = Screen('Rect', img);
-            dest_rect = CenterRect(tex_rect, win_rect);
-            
-            theight = dest_rect(4) - dest_rect(2);
-            twidth  = dest_rect(3) - dest_rect(1);
-            
-            glMatrixMode(GL.TEXTURE); % don't know what this does.
-            glPushMatrix; % don't know what this does.
-            
-            % Mirroring/Flipping the texture is done along the center of the screen.
-            % Therefore, to flip/mirror properly, we need to displace the texture,
-            % flip/mirror it, and then put it back in its original place:
-            glTranslatef(twidth/2, theight/2, 0);
-            glScalef(x,y,1);
-            glTranslatef(-twidth/2, -theight/2, 0);
-            
-            % Draw the texture:
-            if save_to_dv
-                offwind = Screen('OpenOffscreenWindow', wind);
-                Screen('DrawTexture', offwind, img, [], dest_rect);
-                save_img_for_dv(trial_index, trial_config, offwind);
-                Screen('CopyWindow', offwind, wind);
-            else
-                Screen('DrawTexture', wind, img, [], dest_rect);
-            end
-            
-            glMatrixMode(GL.TEXTURE); % don't know what this does
-            glPopMatrix; % don't know what this does
-            % glMatrixMode(GL.MODELVIEW);  % don't know what this does
-            
+        
+        if FlipX
+            x = -1;
         else
-            % if input is an image array, convert it to texture then draw
-            % it to screen
-            
-            if FlipX
-                img(:,:,1) = fliplr(img(:,:,1));
-                img(:,:,2) = fliplr(img(:,:,2));
-                img(:,:,3) = fliplr(img(:,:,3));
-                if size(img, 3) == 4
-                    img(:,:,4) = fliplr(img(:,:,4));
-                end
-            end
-            
-            if FlipY
-                img(:,:,1) = flipud(img(:,:,1));
-                img(:,:,2) = flipud(img(:,:,2));
-                img(:,:,3) = flipud(img(:,:,3));
-                if size(img, 3) == 4
-                    img(:,:,4) = flipud(img(:,:,4));
-                end
-            end
-            
-            imtex = Screen('MakeTexture', wind, img); % create texture
-            tex_rect = Screen('Rect', imtex);
-            dest_rect = CenterRect(tex_rect, win_rect);
-            Screen('DrawTexture', wind, imtex, [], dest_rect);
+            x =  1;
         end
         
-        % toc
+        if FlipY
+            y = -1;
+        else
+            y =  1;
+        end
+        
+        tex_rect = Screen('Rect', tex);
+        dest_rect = CenterRect(tex_rect, win_rect);
+        
+        theight = dest_rect(4) - dest_rect(2);
+        twidth  = dest_rect(3) - dest_rect(1);
+        
+        glMatrixMode(GL.TEXTURE); % don't know what this does.
+        glPushMatrix; % don't know what this does.
+        
+        % Mirroring/Flipping the texture is done along the center of the screen.
+        % Therefore, to flip/mirror properly, we need to displace the texture,
+        % flip/mirror it, and then put it back in its original place:
+        glTranslatef(twidth/2, theight/2, 0);
+        glScalef(x,y,1);
+        glTranslatef(-twidth/2, -theight/2, 0);
+        
+        % Draw the texture:
+        if save_to_dv
+            offwind = Screen('OpenOffscreenWindow', wind);
+            Screen('DrawTexture', offwind, tex, [], dest_rect);
+            save_img_for_dv(trial_index, trial_config, offwind);
+            Screen('CopyWindow', offwind, wind);
+        else
+            Screen('DrawTexture', wind, tex, [], dest_rect);
+        end
+        
+        glMatrixMode(GL.TEXTURE); % don't know what this does
+        glPopMatrix; % don't know what this does
+        % glMatrixMode(GL.MODELVIEW);  % don't know what this does
         
     end
 
