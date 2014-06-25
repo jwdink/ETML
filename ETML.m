@@ -338,6 +338,7 @@ end
         end
         log_msg(sprintf('%s : %s',data_key, data_value),0);
         if record_phases(this_phase)
+            WaitSecs(.002);
             Eyelink('Message','!V TRIAL_VAR %s %s', data_key, data_value);
         end
     end
@@ -465,94 +466,101 @@ end
     end
 
 %% FXN_show_vid
-    function [new_trial_index] = show_vid(trial_index, trial_config)
+    function [new_trial_index, blip_time] = show_vid(trial_index, trial_config)
         
-        % Open Movie:
-        movie = Screen('OpenMovie', wind, [base_dir trial_config.('Stimuli')] );
-            % for some reason crashes matlab w/relative path?
-        
-        % Start playback engine:
-        Screen('PlayMovie', movie, 1);
-        
-        % Check 'blip' setting:
         blip = eval(trial_config.('Blip'));
-        if sum(blip) && rand > .5 % on 50% of trials, don't do blip at all.
-        %    blip = 0;
+        
+        if rand > .5 % even with blip setting on, it only happens on 50% of trials
+            blip = 0; 
         end
-            
+        
+        % Open Movie(s):
+        [movie dur fps imgw imgh] = ...
+            Screen('OpenMovie', wind, [base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
         if blip
-            % make this a function, add in case-checking:
-            [pathstr, filename, ext] = fileparts([base_dir trial_config.('Stimuli')]);
-            stim_blip = [pathstr, '/blip/', filename, '_Blip' ext];
-            movie_blip = Screen('OpenMovie', wind, stim_blip);
-            Screen('PlayMovie', movie_blip, 1);
-            
+            [movieb] = open_blip_movie();
             blip_time = rand(1) * (blip(2)-blip(1)) + blip(1); % random number between blip(1) & blip(2)
             blip_status = 0; % 0 = not started; 1 = in progress; -1 = completed
+            log_msg(['On this trial, the blip will happen at ' num2str(blip_time) ' secs.']);
+            add_data('blip_time', blip_time);
         else
             blip_time = NaN;
             blip_status = -1;
+            add_data('blip_time', 'NA');
         end
         
-        screencap_taken = 0;
-        vid_start = NaN; % this is set below
-        keycode = check_keypress();
+        % Save for DV:
+        tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
+        save_to_dv = 1;
+        draw_tex(tex, trial_index, trial_config, save_to_dv);
+        Screen('FillRect', wind, background_color, win_rect);
+        Screen('Flip', wind);
         
+        % Start playback(s):
+        vid_start = GetSecs();
+        log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
+        Screen('SetMovieTimeIndex', movie, 0);
+        Screen('PlayMovie', movie , 1);
+        if blip
+            Screen('PlayMovie', movieb, 1);
+        end
+        
+        keycode = check_keypress();
+
         while 1
-            
             keycode = check_keypress(keycode);
             
-            tex = Screen('GetMovieImage', wind, movie);
-            
-            if blip
-                tex_blip = Screen('GetMovieImage', wind, movie_blip);
-            end
-            
-            if tex < 0
-                % End Movie
+            if GetSecs() - vid_start >= dur
+                % Movie is over
                 break
             end
             
-            if blip                                      % if we're supposed to blip the vid at some point
-                if     blip_status == 0                  % but we haven't yet
-                    if GetSecs() - vid_start > blip_time % check to see if it's bliptime
-                        blip_start = GetSecs();
-                        blip_status = 1;
+            % Get Movie texture:
+            tex  = Screen('GetMovieImage', wind, movie,  1);
+            
+            % If texture is available, draw and Flip to screen:
+            if  tex > 0 && sum(~blip)
+                draw_tex(tex, trial_index, trial_config);
+                Screen('Close', tex );
+                Screen('Flip',wind, 0, 0);
+            end
+            
+            % If blip setting is on, drawing/flipping to screen is slightly more
+            % complicated:
+            if blip
+                texb = Screen('GetMovieImage', wind, movieb, 1);
+                if (tex > 0) && (texb > 0)
+                    if     blip_status == -1                    % blip done or not happening
+                        draw_tex(tex, trial_index, trial_config);
+                    elseif blip_status ==  0                    % blip will happen, but when?
+                        if GetSecs() - vid_start > blip_time    % check to see if it's bliptime
+                            blip_start = GetSecs();
+                            blip_status = 1;
+                        end
+                        % draw_tex(texb, trial_index, trial_config);
+                        draw_tex(tex , trial_index, trial_config);
+                    elseif blip_status ==  1                    % blip is happening
+                        % draw_tex(tex , trial_index, trial_config);
+                        draw_tex(texb, trial_index, trial_config);
+                        if GetSecs() - blip_start > .125        % <--- 125 ms.
+                            blip_status = -1;
+                        end
                     end
-                    Screen('Close', tex_blip);           % if it isn't, release blip_tex
-                elseif blip_status == 1                  % if we're in the middle of blipping
-                        tex = tex_blip;                  % blip it
-                    if GetSecs() - blip_start > .125     % check to see if it's time to stop
-                        blip_status = -1;                % if it is, stop blipping.
-                    end
-                elseif blip_status == -1                 % if we already finished blipping
-                    Screen('Close', tex_blip);           % release blip_tex
+                    Screen('Close', tex );
+                    Screen('Close', texb);
+                    Screen('Flip',wind, 0, 0);
                 end
             end
-            
-            if screencap_taken
-                draw_tex(tex, trial_index, trial_config);  % draw texture to wind
-            else
-                save_to_dv = 1;
-                draw_tex(tex, trial_index, trial_config, save_to_dv)
-                log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
-                vid_start = GetSecs();
-                screencap_taken = 1;
-            end
-            
-            if debug_mode
-                % Draw interest areas
-            end
-            
-            Screen('Flip', wind); % Update display
-            Screen('Close', tex); % Release texture
-        end
+
+        end % end movie loop
         
-        Screen('PlayMovie', movie, 0);
+        % Close Movie(s):
+        dropped_frames = Screen('PlayMovie',  movie, 0);
+        log_msg( sprintf('Dropped frames: %d', dropped_frames) );
         Screen('CloseMovie', movie);
         if blip
-            Screen('PlayMovie', movie_blip, 0);
-            Screen('CloseMovie', movie_blip);
+            Screen('PlayMovie',  movieb, 0);
+            Screen('CloseMovie', movieb);
         end
         Screen('Flip', wind);
         log_msg('Video is over.');
@@ -561,8 +569,27 @@ end
         check_keypress(keycode, 1); % flush currently pressed keys
         
         new_trial_index = trial_index + 1;
-        WaitSecs(.5); 
+        WaitSecs(.5);
         
+        function [movieb] = open_blip_movie()
+            [pathstr, filename] = fileparts([base_dir trial_config.('Stimuli')]);
+            
+            
+            blipdir = [pathstr, '/blip/'];
+            if ~exist(blipdir, 'dir')
+                 blipdir = [pathstr, '/Blip/'];
+            end
+            blipdirstr = dir(blipdir);
+            blipfiles = {blipdirstr.name};
+            
+            b_i = ~cellfun(@isempty, strfind(blipfiles, filename) );
+            blipfile = blipfiles(b_i)
+            
+            stim_blip = [blipdir blipfile{1}];
+
+            [movieb durb fpsb imgwb imghb] = ...
+                Screen('OpenMovie', wind, stim_blip ); %#ok<NASGU,ASGLU>
+        end
     end
 
 %% FXN_show_img
@@ -621,10 +648,11 @@ end
             save_to_dv = 0;
         end
         
+        % tic
+        
         FlipX = trial_config.FlipX;
         FlipY = trial_config.FlipY;
-        
-        
+
         if length(img) == 1
             % if input is a texture pointer, draw it to screen
             
@@ -639,7 +667,7 @@ end
             else
                 y =  1;
             end
-            
+
             tex_rect = Screen('Rect', img);
             dest_rect = CenterRect(tex_rect, win_rect);
             
@@ -698,6 +726,7 @@ end
             Screen('DrawTexture', wind, imtex, [], dest_rect);
         end
         
+        % toc
         
     end
 
