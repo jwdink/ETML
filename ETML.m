@@ -307,7 +307,7 @@ end
             new_trial_index = ...
                 show_vid( trial_index, trial_config );
             
-        elseif strfind(trial_config.StimType, 'custom')
+        elseif ~isempty( strfind(trial_config.StimType, 'custom') )
             %% CUSTOM SCRIPT GOES HERE ----------------------
             
             
@@ -503,11 +503,13 @@ end
         % Start playback(s):
         vid_start = GetSecs();
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
-        Screen('SetMovieTimeIndex', movie, 0);
         Screen('PlayMovie', movie , 1);
+        WaitSecs(.25);
         if blip
             Screen('PlayMovie', movieb, 1);
+            Screen('SetMovieTimeIndex', movieb, 0);
         end
+        Screen('SetMovieTimeIndex', movie, 0);
         
         keycode = check_keypress();
 
@@ -541,10 +543,10 @@ end
                             blip_start = GetSecs();
                             blip_status = 1;
                         end
-                        % draw_tex(texb, trial_index, trial_config);
+                        draw_tex(texb, trial_index, trial_config);
                         draw_tex(tex , trial_index, trial_config);
                     elseif blip_status ==  1                    % blip is happening
-                        % draw_tex(tex , trial_index, trial_config);
+                        draw_tex(tex , trial_index, trial_config);
                         draw_tex(texb, trial_index, trial_config);
                         if GetSecs() - blip_start > .125        % <--- 125 ms.
                             blip_status = -1;
@@ -573,7 +575,7 @@ end
         check_keypress(keycode, 1); % flush currently pressed keys
         
         new_trial_index = trial_index + 1;
-        WaitSecs(.5);
+        WaitSecs(.1);
         
         function [movieb] = open_blip_movie()
             [pathstr, filename] = fileparts([base_dir trial_config.('Stimuli')]);
