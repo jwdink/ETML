@@ -1,4 +1,4 @@
-function [my_err] = ETML ()
+function [my_err] = ETML (base_dir, session_info)
 
 my_err = [];
 
@@ -6,7 +6,9 @@ try
     %% LOAD CONFIGURATION %%
     
     % Get experiment directory:
-    base_dir = [ uigetdir([], 'Select experiment directory') '/' ];
+    if nargin < 1
+        base_dir = [ uigetdir([], 'Select experiment directory') '/' ];
+    end
     
     cd(base_dir); %
     
@@ -45,10 +47,19 @@ try
     dummy_mode = get_config('DummyMode'); % not tracking eyes
     debug_mode = get_config('DebugMode'); % debugging tools (e.g. windowed)
     if ~debug_mode
-        experimenter = input('Enter your (experimenter) initials: ','s');
-        subject_code = input('Enter subject code: ', 's');
-        condition = input('Enter condition: ', 's');
-        condition = str2double(condition);
+        if nargin < 2
+            experimenter = input('Enter your (experimenter) initials: ','s');
+            subject_code = input('Enter subject code: ', 's');
+            condition = input('Enter condition: ', 's');
+            condition = str2double(condition);  
+        else
+            experimenter = session_info{1};
+            subject_code = session_info{2};
+            condition    = session_info{3};
+            if ischar(condition)
+                condition = str2double(condition);
+            end
+        end
     else
         experimenter = 'null';
         subject_code = '0';
@@ -356,8 +367,15 @@ end
         add_data('this_block',  trial_config.('Block') );
         add_data('trial',       trial_index );
         add_data('stim',        trial_config.('Stimuli') );
-        add_data('flip_x',      trial_config.('FlipX') );
-        add_data('flip_y',      trial_config.('FlipY') );
+        
+        other_fields = {'FlipX', 'FlipY', 'DimX', 'DimY'};
+        
+        for field = other_fields
+            field = field{1};
+            if isfield(trial_config,field)
+                add_data(field,      trial_config.(field) );
+            end
+        end
         
         log_msg(...
             ['START_RECORDING_PHASE_', num2str(trial_config.('Phase')),...
@@ -412,7 +430,7 @@ end
                     '_phase_' num2str(trial_config.('Phase')) ...
                     '_block_' num2str(trial_config.('Block')) ...
                     '_trial_' num2str(trial_index) '.jpg' ];
-                imgpath = ['data/', subject_code, '/' imgname '.jpg'];
+                imgpath = ['data/', subject_code, '/' imgname];
                 imwrite(image_array, imgpath);
             end
             
@@ -507,8 +525,10 @@ end
         else
             blip_time = NaN;
             blip_status = -1;
-            if record_phases(this_phase)
-                add_data('blip_time', 'NaN');
+            if isfield(trial_config, 'Blip')
+                if record_phases(this_phase)
+                    add_data('blip_time', 'NaN');
+                end
             end
         end
         
@@ -540,7 +560,6 @@ end
         Screen('Flip', wind);
         
         % Start playback(s):
-        vid_start = GetSecs();
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
         Screen('PlayMovie', movie , mov_rate);
         WaitSecs(.25);
@@ -549,6 +568,8 @@ end
             Screen('SetMovieTimeIndex', movieb, 0);
         end
         Screen('SetMovieTimeIndex', movie, 0);
+        
+        vid_start = GetSecs();
         
         keycode = check_keypress();
 
@@ -559,7 +580,7 @@ end
                 break % end movie
             end
             
-            if keycode
+            if sum(keycode)
                 if GetSecs() - vid_start >= min_duration
                   break % end movie
                 end
@@ -711,7 +732,7 @@ end
             else
                 % if it's an image, advance on keypress, assuming it's been
                 % up for minimum amount of time
-                if keycode
+                if sum(keycode)
                     if GetSecs() > (image_start + min_duration)
                         close_image = 1;
                         new_trial_index = trial_index + 1;
@@ -736,6 +757,7 @@ end
             save_to_dv = 0;
         end
         
+        % Get Flip Config:
         if isfield(trial_config, 'FlipX')
             FlipX = trial_config.FlipX;
         else
@@ -746,20 +768,41 @@ end
         else
             FlipY = 0;
         end
-        
         if FlipX
             x = -1;
         else
             x =  1;
         end
-        
         if FlipY
             y = -1;
         else
             y =  1;
         end
         
+        % Get Dim config:
         tex_rect = Screen('Rect', tex);
+        if isfield(trial_config, 'DimX')
+            DimX = trial_config.DimX;
+            if ~( ischar(DimX) || isnan(DimX) || DimX==0 )
+                % if they specified a number in pixels
+                tex_rect([1 3]) = [0 DimX];
+            elseif ischar(DimX)
+                % if they specified a percentage
+                DimX = strrep(DimX,'%','');
+                tex_rect(3) = tex_rect(3) * str2double(DimX)/100;
+            end
+        end
+        if isfield(trial_config, 'DimY')
+            DimY = trial_config.DimY;
+            if ~( ischar(DimY) || isnan(DimY) || DimY==0 )
+                % if they specified a number in pixels
+                tex_rect([2 4]) = [0 DimY];
+            elseif ischar(DimY)
+                % if they specified a percentage
+                DimY = strrep(DimY,'%','');
+                tex_rect(4) = tex_rect(4) * str2double(DimY)/100;
+            end
+        end
         dest_rect = CenterRect(tex_rect, win_rect);
         
         theight = dest_rect(4) - dest_rect(2);
