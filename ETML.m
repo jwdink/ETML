@@ -72,9 +72,8 @@ try
     session_data = struct('key',{},'value',{});
     
     % Key controls
-    next_key = get_config('NextIMGKey');
-    prev_key = get_config('PrevIMGKey');
-    interval = get_config('NextIMGTime');
+    next_key = 'RightArrow';
+    prev_key = 'LeftArrow';
     
     % Create folder for dv-imgs
     mkdir('data', subject_code);
@@ -297,7 +296,8 @@ end
 %% FXN_show_stimuli
     function [new_trial_index] = show_stimuli ( trial_index, trial_config )
         
-        if     strfind(trial_config.StimType, 'img')
+        if     ~isempty( strfind(trial_config.StimType, 'img') ) || ...
+               ~isempty( strfind(trial_config.StimType, 'slideshow') )
 
             new_trial_index = ...
                 show_img( trial_index, trial_config );
@@ -468,14 +468,33 @@ end
 %% FXN_show_vid
     function [new_trial_index, blip_time] = show_vid(trial_index, trial_config)
         
-        blip = eval(trial_config.('Blip'));
-        
+        % Get trial info about blip:
+        if isfield(trial_config, 'Blip')
+            blip = smart_eval(trial_config.('Blip'));
+        else
+            blip = 0;
+        end
         if rand > .5 % even with blip setting on, it only happens on 50% of trials
             blip = 0; 
         end
         
+        % Get trial info about video speed:
+        if isfield(trial_config, 'VidRate')
+            rate_config = smart_eval(trial_config.('VidRate'));
+            if sum(abs(rate_config ~= 0)) && ~sum(isnan(rate_config))
+                mov_rate = randsample(rate_config, 1);
+            else
+                mov_rate = 1;
+            end
+        else
+            mov_rate = 1;
+        end
+        if record_phases(this_phase)
+            add_data('vid_rate', mov_rate);
+        end
+            
         % Open Movie(s):
-        [movie dur fps imgw imgh] = ...
+        [movie mov_dur fps imgw imgh] = ...
             Screen('OpenMovie', wind, [base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
         if blip
             [movieb] = open_blip_movie();
@@ -489,10 +508,30 @@ end
             blip_time = NaN;
             blip_status = -1;
             if record_phases(this_phase)
-                add_data('blip_time', 'NA');
+                add_data('blip_time', 'NaN');
             end
         end
         
+        % Get trial info about stim duration:
+        if isfield(trial_config, 'Duration')
+            dur_config = smart_eval(trial_config.('Duration'));
+            if length(dur_config) > 1
+                duration = dur_config(2);
+                min_duration = dur_config(1);
+            else
+                if dur_config == 0 || isnan(dur_config)
+                    duration = mov_dur;
+                    min_duration = duration;
+                else
+                    duration = dur_config;
+                    min_duration = duration;
+                end
+            end
+        else
+            duration = mov_dur;
+            min_duration = duration;
+        end
+ 
         % Save for DV:
         tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
         save_to_dv = 1;
@@ -503,10 +542,10 @@ end
         % Start playback(s):
         vid_start = GetSecs();
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
-        Screen('PlayMovie', movie , 1);
+        Screen('PlayMovie', movie , mov_rate);
         WaitSecs(.25);
         if blip
-            Screen('PlayMovie', movieb, 1);
+            Screen('PlayMovie', movieb, mov_rate);
             Screen('SetMovieTimeIndex', movieb, 0);
         end
         Screen('SetMovieTimeIndex', movie, 0);
@@ -516,9 +555,14 @@ end
         while 1
             keycode = check_keypress(keycode);
             
-            if GetSecs() - vid_start >= dur
-                % Movie is over
-                break
+            if GetSecs() - vid_start >= duration
+                break % end movie
+            end
+            
+            if keycode
+                if GetSecs() - vid_start >= min_duration
+                  break % end movie
+                end
             end
             
             % Get Movie texture:
@@ -603,6 +647,26 @@ end
         
         stim_path = trial_config.('Stimuli');
         
+        % Get trial info:
+        if isfield(trial_config,'Duration')
+            dur_config = smart_eval(trial_config.('Duration'));
+            if length(dur_config) > 1
+                min_duration = dur_config(1);
+                duration = dur_config(2);
+            else
+                duration = dur_config;
+                min_duration = duration;
+            end
+        else
+            duration = 0;
+        end
+        if strfind('slideshow', trial_config.('StimType'))
+            slideshow = 1;
+        else
+            slideshow = 0;
+        end
+        
+        % Get image:
         image = imread(stim_path);                                  % read in image file
         tex = Screen('MakeTexture', wind, image, [], [], [], 1);    % make texture
         draw_tex(tex, trial_index, trial_config)                    % draw to window
@@ -623,11 +687,11 @@ end
         
         while ~close_image
             
-            if interval~=0
+            if duration > 0
                 % if each image is only supposed to be up there for a
                 % certain amount of time, this advances the slide at
                 % that time.
-                if GetSecs() > (image_start + interval)
+                if GetSecs() > (image_start + duration)
                     close_image = 1;
                     new_trial_index = trial_index + 1;
                 end
@@ -635,13 +699,26 @@ end
             
             keycode = check_keypress(keycode);
             
-            if     strcmpi(KbName(keycode), next_key)
-                close_image = 1;
-                new_trial_index = trial_index + 1;
-            elseif strcmpi(KbName(keycode), prev_key)
-                close_image = 1;
-                new_trial_index = trial_index - 1;
+            if slideshow
+                % if it's a slideshow, then they can sift thru the slides
+                if     strcmpi(KbName(keycode), next_key)
+                    close_image = 1;
+                    new_trial_index = trial_index + 1;
+                elseif strcmpi(KbName(keycode), prev_key)
+                    close_image = 1;
+                    new_trial_index = trial_index - 1;
+                end
+            else
+                % if it's an image, advance on keypress, assuming it's been
+                % up for minimum amount of time
+                if keycode
+                    if GetSecs() > (image_start + min_duration)
+                        close_image = 1;
+                        new_trial_index = trial_index + 1;
+                    end
+                end
             end
+                    
             
         end
         
@@ -659,8 +736,16 @@ end
             save_to_dv = 0;
         end
         
-        FlipX = trial_config.FlipX;
-        FlipY = trial_config.FlipY;
+        if isfield(trial_config, 'FlipX')
+            FlipX = trial_config.FlipX;
+        else
+            FlipX = 0;
+        end
+        if isfield(trial_config, 'FlipY')
+            FlipY = trial_config.FlipY;
+        else
+            FlipY = 0;
+        end
         
         if FlipX
             x = -1;
@@ -713,6 +798,16 @@ end
         
         % replace quotes so we get pure values
         value = strrep(value, '"', '');
+    end
+
+%% FXN_smart_eval
+    function [value] = smart_eval (input)
+        if ischar(input)
+            input = strrep(input, '"', '');
+            value = eval(input);
+        else
+            value = input;
+        end
     end
 
 %% FXN_log_msg
