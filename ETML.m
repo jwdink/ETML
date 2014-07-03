@@ -231,6 +231,7 @@ try
             log_msg('Calibration started.');
             EyelinkDoTrackerSetup(el);
             log_msg('Calibration finished.');
+            WaitSecs(.5);
         else
             log_msg('It is not a recording phase.');
         end
@@ -498,21 +499,8 @@ end
             blip = 0; 
         end
         
-        % Get trial info about video speed:
-        if isfield(trial_config, 'VidRate')
-            rate_config = smart_eval(trial_config.('VidRate'));
-            if sum(abs(rate_config ~= 0)) && ~sum(isnan(rate_config))
-                mov_rate = randsample(rate_config, 1);
-            else
-                mov_rate = 1;
-            end
-        else
-            mov_rate = 1;
-        end
-        if record_phases(this_phase)
-            add_data('vid_rate', mov_rate);
-        end
-            
+        mov_rate = 1;
+        
         % Open Movie(s):
         [movie mov_dur fps imgw imgh] = ...
             Screen('OpenMovie', wind, [base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
