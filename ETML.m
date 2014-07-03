@@ -290,6 +290,7 @@ try
     
     post_experiment(0);
     
+    
 catch my_err
         
     log_msg(my_err.message, 0);
@@ -541,7 +542,7 @@ end
                 min_duration = dur_config(1);
             else
                 if dur_config == 0 || isnan(dur_config)
-                    duration = mov_dur;
+                    duration = mov_dur * 1/mov_rate;
                     min_duration = duration;
                 else
                     duration = dur_config;
