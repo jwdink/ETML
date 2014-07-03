@@ -562,10 +562,10 @@ end
         
         % Start playback(s):
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
-        Screen('PlayMovie', movie , mov_rate);
+        Screen('PlayMovie', movie , mov_rate, 1);
         WaitSecs(.25);
         if blip
-            Screen('PlayMovie', movieb, mov_rate);
+            Screen('PlayMovie', movieb, mov_rate, 1);
             Screen('SetMovieTimeIndex', movieb, 0);
         end
         Screen('SetMovieTimeIndex', movie, 0);
