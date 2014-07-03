@@ -21,7 +21,7 @@ try
     
     % Re-Format the Stimuli Config file into a useful table:
     stim_config_p = pad_struct(stim_config);
-    % WriteStructsToText('test.txt',stim_config_p); % for testing
+    WriteStructsToText('test.txt',stim_config_p); % for testing
     
     % Re-Format the Interest Area Config file into a useful table:
     % * TO DO *
@@ -259,7 +259,7 @@ try
             trials = unique( [stim_config_p(this_block_rows).('Trial')] );
             
             % Shuffle trial order?:
-            if stim_config_p(this_block_rows(1)).('Random')
+            if stim_config_p(this_block_rows(1)).('Random') == 1 % 1 means shuffle trials
                 idx = randperm(length(trials));
                 trials = trials(idx);
             end
@@ -1050,10 +1050,10 @@ end
     function [struct] = pad_struct (config_struct)
         
         struct = config_struct;
-        struct = pad_col('Trial'     ,struct);
-        struct = pad_col('Block'     ,struct);
-        struct = pad_col('Phase'     ,struct);
         struct = pad_col('Condition' ,struct);
+        struct = pad_col('Phase'     ,struct);
+        struct = pad_col('Block'     ,struct);
+        struct = pad_col('Trial'     ,struct);
         
         % Helper function:
         function [new_struct] = pad_col (col_name, config_struct)
