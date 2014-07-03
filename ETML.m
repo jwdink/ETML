@@ -288,6 +288,7 @@ try
         end
     end
     
+    post_experiment(0);
     
 catch my_err
         
@@ -370,8 +371,8 @@ end
         
         other_fields = {'FlipX', 'FlipY', 'DimX', 'DimY'};
         
-        for field = other_fields
-            field = field{1};
+        for f = 1:length(other_fields)
+            field = other_fields{f};
             if isfield(trial_config,field)
                 add_data(field,      trial_config.(field) );
             end
@@ -685,7 +686,7 @@ end
             slideshow = 1;
         else
             slideshow = 0;
-        end
+        end 
         
         % Get image:
         image = imread(stim_path);                                  % read in image file
