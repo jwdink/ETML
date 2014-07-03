@@ -486,17 +486,49 @@ end
         
     end
 
+%% FXN_is_default
+    function [out] = is_default (config)
+        
+        if isempty(config)
+            % if empty
+            out = 1;
+            return
+        end
+        
+        if length(config) == 1 && config(1) == 0
+            % if zero or nan
+            out = 1;
+            return
+        end
+        
+        if sum(isnan(config))
+            % if any nans
+            out = 1;
+            return
+        end
+        
+        out = 0;
+        return
+        
+    end
+
 %% FXN_show_vid
     function [new_trial_index, blip_time] = show_vid(trial_index, trial_config)
         
         % Get trial info about blip:
         if isfield(trial_config, 'Blip')
-            blip = smart_eval(trial_config.('Blip'));
+            blip_config = smart_eval(trial_config.('Blip'));
+            if is_default(blip_config)
+                blip = 0;
+            else
+                if rand > .5 % even with blip setting on, it only happens on 50% of trials
+                    blip = 0;
+                else
+                    blip = 1;
+                end
+            end
         else
             blip = 0;
-        end
-        if rand > .5 % even with blip setting on, it only happens on 50% of trials
-            blip = 0; 
         end
     
         mov_rate = 1;
@@ -522,6 +554,26 @@ end
             end
         end
         
+        % Custom Start time [jitter]?:
+        if isfield(trial_config, 'VidStartTime')
+            vid_start_config = smart_eval(trial_config.('VidStartTime'));
+            if ~is_default(vid_start_config)
+                max_vid_start = max(vid_start_config);
+                min_vid_start = min(vid_start_config);
+                vid_start_time = (max_vid_start-min_vid_start)*rand() + min_vid_start;
+                % since we're coming into the film late, its time-left duration
+                % is shoter than its total duration:
+                mov_dur = mov_dur - vid_start_time;
+            else
+                vid_start_time = 0;
+            end
+            if record_phases(this_phase)
+                add_data('vid_start_time', vid_start_time);
+            end
+        else
+            vid_start_time = 0;
+        end
+        
         % Get trial info about stim duration:
         if isfield(trial_config, 'Duration')
             dur_config = smart_eval(trial_config.('Duration'));
@@ -529,7 +581,7 @@ end
                 duration = dur_config(2);
                 min_duration = dur_config(1);
             else
-                if dur_config == 0 || isnan(dur_config)
+                if is_default(dur_config)
                     duration = mov_dur * 1/mov_rate;
                     min_duration = duration;
                 else
@@ -542,8 +594,22 @@ end
             min_duration = duration;
         end
         
+        % Duration jitter:
+        if isfield(trial_config, 'DurJitter')
+            djit_config = smart_eval(trial_config.('DurJitter'));
+            if ~is_default(djit_config)
+                if length(djit_config) == 1
+                    djit_config(2) = 0;
+                end
+                max_djit = max(djit_config);
+                min_djit = min(djit_config);
 
- 
+                dur_jit = (max_djit-min_djit)*rand() + min_djit;
+                duration = duration + dur_jit;
+                min_duration = min_duration + dur_jit;
+            end
+        end  
+
         % Save for DV:
         tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
         save_to_dv = 1;
@@ -557,9 +623,9 @@ end
         WaitSecs(.10);
         if blip
             Screen('PlayMovie', movieb, mov_rate, 0);
-            Screen('SetMovieTimeIndex', movieb, 0);
+            Screen('SetMovieTimeIndex', movieb, vid_start_time);
         end
-        Screen('SetMovieTimeIndex', movie, 0);
+        Screen('SetMovieTimeIndex', movie, vid_start_time);
         
         vid_start = GetSecs();
         
@@ -660,19 +726,47 @@ end
         
         stim_path = trial_config.('Stimuli');
         
-        % Get trial info:
-        if isfield(trial_config,'Duration')
+        % Get trial info about stim duration:
+        if isfield(trial_config, 'Duration')
             dur_config = smart_eval(trial_config.('Duration'));
             if length(dur_config) > 1
-                min_duration = dur_config(1);
                 duration = dur_config(2);
+                min_duration = dur_config(1);
             else
-                duration = dur_config;
-                min_duration = duration;
+                if is_default(dur_config)
+                    % if they entered nothing, assume image until keypress
+                    duration = Inf;
+                    min_duration = 0;
+                else
+                    % if they entered 1 number, assume stim up for that
+                    % amount of time (regardless of keypress)
+                    duration = dur_config;
+                    min_duration = duration;
+                end
             end
         else
-            duration = 0;
+            % if they entered nothing, assume image until keypress
+            duration = Inf;
+            min_duration = 0;
         end
+        
+        % Duration jitter:
+        if isfield(trial_config, 'DurJitter')
+            djit_config = smart_eval(trial_config.('DurJitter'));
+            if ~is_default(djit_config)
+                if length(djit_config) == 1
+                    djit_config(2) = 0;
+                end
+                max_djit = max(djit_config);
+                min_djit = min(djit_config);
+
+                dur_jit = (max_djit-min_djit)*rand() + min_djit;
+                duration = duration + dur_jit;
+                min_duration = min_duration + dur_jit;
+            end
+        end 
+        
+        % Slideshow:
         if strfind('slideshow', trial_config.('StimType'))
             slideshow = 1;
         else
@@ -776,7 +870,7 @@ end
         tex_rect_o = tex_rect; % original texrect, before stretching. required for flipX,Y to work
         if isfield(trial_config, 'DimX')
             DimX = trial_config.DimX;
-            if ~( ischar(DimX) || isnan(DimX) || DimX==0 )
+            if ~( ischar(DimX) || is_default(DimX) )
                 % if they specified a number in pixels
                 tex_rect([1 3]) = [0 DimX];
             elseif ischar(DimX)
@@ -787,7 +881,7 @@ end
         end
         if isfield(trial_config, 'DimY')
             DimY = trial_config.DimY;
-            if ~( ischar(DimY) || isnan(DimY) || DimY==0 )
+            if ~( ischar(DimY) || is_default(DimY) )
                 % if they specified a number in pixels
                 tex_rect([2 4]) = [0 DimY];
             elseif ischar(DimY)
