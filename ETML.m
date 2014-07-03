@@ -498,7 +498,7 @@ end
         if rand > .5 % even with blip setting on, it only happens on 50% of trials
             blip = 0; 
         end
-        
+    
         mov_rate = 1;
         
         % Open Movie(s):
@@ -541,6 +541,8 @@ end
             duration = mov_dur;
             min_duration = duration;
         end
+        
+
  
         % Save for DV:
         tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
@@ -551,10 +553,10 @@ end
         
         % Start playback(s):
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
-        Screen('PlayMovie', movie , mov_rate, 1);
+        Screen('PlayMovie', movie , mov_rate, 0);
         WaitSecs(.10);
         if blip
-            Screen('PlayMovie', movieb, mov_rate, 1);
+            Screen('PlayMovie', movieb, mov_rate, 0);
             Screen('SetMovieTimeIndex', movieb, 0);
         end
         Screen('SetMovieTimeIndex', movie, 0);
@@ -802,7 +804,7 @@ end
         glMatrixMode(GL.TEXTURE); % don't know what this does.
         glPushMatrix; % don't know what this does.
         
-        % Mirroring/Flipping the texture is done along the center of the screen.
+        % Mirroring/Flipping the texture is done along the center of the tex.
         % Therefore, to flip/mirror properly, we need to displace the texture,
         % flip/mirror it, and then put it back in its original place:
         glTranslatef(twidth/2, theight/2, 0);
