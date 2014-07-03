@@ -21,7 +21,7 @@ try
     
     % Re-Format the Stimuli Config file into a useful table:
     stim_config_p = pad_struct(stim_config);
-    WriteStructsToText('test.txt',stim_config_p); % for testing
+    WriteStructsToText('exp_record.csv',stim_config_p); % for testing
     
     % Re-Format the Interest Area Config file into a useful table:
     % * TO DO *
@@ -552,7 +552,7 @@ end
         % Start playback(s):
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
         Screen('PlayMovie', movie , mov_rate, 1);
-        WaitSecs(.25);
+        WaitSecs(.10);
         if blip
             Screen('PlayMovie', movieb, mov_rate, 1);
             Screen('SetMovieTimeIndex', movieb, 0);
@@ -771,6 +771,7 @@ end
         
         % Get Dim config:
         tex_rect = Screen('Rect', tex);
+        tex_rect_o = tex_rect; % original texrect, before stretching. required for flipX,Y to work
         if isfield(trial_config, 'DimX')
             DimX = trial_config.DimX;
             if ~( ischar(DimX) || isnan(DimX) || DimX==0 )
@@ -795,8 +796,8 @@ end
         end
         dest_rect = CenterRect(tex_rect, win_rect);
         
-        theight = dest_rect(4) - dest_rect(2);
-        twidth  = dest_rect(3) - dest_rect(1);
+        theight = tex_rect_o(4) - tex_rect_o(2);
+        twidth  = tex_rect_o(3) - tex_rect_o(1);
         
         glMatrixMode(GL.TEXTURE); % don't know what this does.
         glPushMatrix; % don't know what this does.
