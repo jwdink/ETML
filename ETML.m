@@ -555,23 +555,23 @@ end
         end
         
         % Custom Start time [jitter]?:
-        if isfield(trial_config, 'VidStartTime')
-            vid_start_config = smart_eval(trial_config.('VidStartTime'));
-            if ~is_default(vid_start_config)
-                max_vid_start = max(vid_start_config);
-                min_vid_start = min(vid_start_config);
-                vid_start_time = (max_vid_start-min_vid_start)*rand() + min_vid_start;
+        if isfield(trial_config, 'TimeInVidToStart')
+            tiv_config = smart_eval(trial_config.('TimeInVidToStart'));
+            if ~is_default(tiv_config)
+                max_tiv = max(tiv_config);
+                min_tiv = min(tiv_config);
+                tiv_tostart = (max_tiv-min_tiv)*rand() + min_tiv;
                 % since we're coming into the film late, its time-left duration
                 % is shoter than its total duration:
-                mov_dur = mov_dur - vid_start_time;
+                mov_dur = mov_dur - tiv_tostart;
             else
-                vid_start_time = 0;
+                tiv_tostart = 0;
             end
             if record_phases(this_phase)
-                add_data('vid_start_time', vid_start_time);
+                add_data('tiv_tostart', tiv_tostart);
             end
         else
-            vid_start_time = 0;
+            tiv_tostart = 0;
         end
         
         % Get trial info about stim duration:
@@ -623,9 +623,9 @@ end
         WaitSecs(.10);
         if blip
             Screen('PlayMovie', movieb, mov_rate, 0);
-            Screen('SetMovieTimeIndex', movieb, vid_start_time);
+            Screen('SetMovieTimeIndex', movieb, tiv_tostart);
         end
-        Screen('SetMovieTimeIndex', movie, vid_start_time);
+        Screen('SetMovieTimeIndex', movie, tiv_tostart);
         
         vid_start = GetSecs();
         
