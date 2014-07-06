@@ -19,10 +19,6 @@ try
         IA_config = ReadStructsFromTextW('interest_areas.txt');
     end
     
-    % Re-Format the Stimuli Config file into a useful table:
-    stim_config_p = pad_struct(stim_config);
-    WriteStructsToText('exp_record.csv',stim_config_p); % for testing
-    
     % Re-Format the Interest Area Config file into a useful table:
     % * TO DO *
     
@@ -65,6 +61,11 @@ try
         subject_code = '0';
         condition = 1;
     end
+    
+    % Re-Format the Stimuli Config file into a useful table:
+    stim_config_p = pad_struct(stim_config);
+    path = ['data/', subject_code, '/' 'trial_record.txt'];
+    WriteStructsToText(path,stim_config_p); % for testing
     
     % Begin logging now, because we have the subject_code
     if ~exist('logs','dir'); mkdir('logs'); end;
@@ -1084,7 +1085,7 @@ end
             results(length(results)).value = comments{1};
             
             % merge in data
-            for i = 1:length(data)
+            for i = 1:length(session_data)
                 results(length(results) + 1).key = session_data(i).key;
                 results(length(results)).value = session_data(i).value;
             end
