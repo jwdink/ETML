@@ -62,10 +62,13 @@ try
         condition = 1;
     end
     
+    % Create folder for dv-imgs
+    mkdir('data', subject_code);
+    
     % Re-Format the Stimuli Config file into a useful table:
     stim_config_p = pad_struct(stim_config);
     path = ['data/', subject_code, '/' 'trial_record.txt'];
-    WriteStructsToText(path,stim_config_p); % for testing
+    WriteStructsToText(path, stim_config_p); % for testing
     
     % Begin logging now, because we have the subject_code
     if ~exist('logs','dir'); mkdir('logs'); end;
@@ -86,9 +89,6 @@ try
     % Key controls
     next_key = 'RightArrow';
     prev_key = 'LeftArrow';
-    
-    % Create folder for dv-imgs
-    mkdir('data', subject_code);
     
     % Wait for experimenter to press Enter to begin
     disp(upper(sprintf('\n\nPress any key to launch the experiment window\n\n')));
@@ -229,6 +229,13 @@ try
         % Calibrate the Eye Tracker?:
         if record_phases(this_phase)
             log_msg('It is a recording phase.');
+            
+            while KbCheck(); end;
+            msg = 'Before continuing, we just need to calibrate. Let the experimenter know once you''re ready.';
+            DrawFormattedText(wind, msg, 'center', 'center');
+            Screen('Flip', wind);
+            KbWait();
+            
             log_msg('Calibration started.');
             EyelinkDoTrackerSetup(el);
             log_msg('Calibration finished.');
