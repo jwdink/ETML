@@ -623,18 +623,22 @@ end
         save_to_dv = 1;
         draw_tex(tex, trial_index, trial_config, save_to_dv);
         Screen('FillRect', wind, background_color, win_rect);
+        Screen('Close',tex);
         Screen('Flip', wind);
+        Screen('Flip', wind);
+        
         
         % Start playback(s):
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
-        Screen('PlayMovie', movie , mov_rate, 0);
-        WaitSecs(.10);
+        Screen('PlayMovie', movie , mov_rate);
+        WaitSecs(.25);
         if blip
-            Screen('PlayMovie', movieb, mov_rate, 0);
+            Screen('PlayMovie', movieb, mov_rate);
+            WaitSecs(.25);
             Screen('SetMovieTimeIndex', movieb, tiv_tostart);
         end
         Screen('SetMovieTimeIndex', movie, tiv_tostart);
-        
+
         vid_start = GetSecs();
         
         keycode = check_keypress();
@@ -659,7 +663,7 @@ end
             if  tex > 0 && sum(~blip)
                 draw_tex(tex, trial_index, trial_config);
                 Screen('Close', tex );
-                Screen('Flip',wind, 0, 0);
+                Screen('Flip',wind, [], 0);
             end
             
             % If blip setting is on, drawing/flipping to screen is slightly more
@@ -942,7 +946,11 @@ end
     function [value] = smart_eval (input)
         if ischar(input)
             input = strrep(input, '"', '');
-            value = eval(input);
+            if isempty(input)
+                value = [];
+            else
+                value = eval(input);
+            end
         else
             value = input;
         end
@@ -1100,7 +1108,7 @@ end
             % save session file
             if ~exist('sessions', 'dir'); mkdir('sessions'); end;
             filename = [base_dir 'sessions/' subject_code '.txt'];
-            log_msg(sprintf('Saving results file to %s',filename));
+            log_msg(sprintf('Saving results file to %s',filename), 0);
             WriteStructsToText(filename,results)
         else
             disp('Experiment aborted - results file not saved, but there is a log.');
