@@ -532,7 +532,7 @@ end
                 if rand > .5 % even with blip setting on, it only happens on 50% of trials
                     blip = 0;
                 else
-                    blip = 1;
+                    blip = blip_config;
                 end
             end
         else
