@@ -629,7 +629,6 @@ end
         
         
         % Start playback(s):
-        log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
         Screen('PlayMovie', movie , mov_rate);
         WaitSecs(.25);
         if blip
@@ -639,6 +638,7 @@ end
         end
         Screen('SetMovieTimeIndex', movie, tiv_tostart);
 
+        log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
         vid_start = GetSecs();
         
         keycode = check_keypress();
