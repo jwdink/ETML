@@ -22,6 +22,10 @@ try
     % Re-Format the Interest Area Config file into a useful table:
     % * TO DO *
     
+    % Create Necessary Folders:
+    if ~exist('logs','dir'); mkdir('logs'); end;
+    if ~exist('sessions', 'dir'); mkdir('sessions'); end;
+    
     sprintf('You are running %s\n\n', get_config('StudyName'));
     
     %% SET UP EXPERIMENT AND SET SESSION VARIABLES %%
@@ -62,7 +66,7 @@ try
         condition = 1;
     end
     
-    % Create folder for dv-imgs
+    % Make trial-data folder:
     mkdir('data', subject_code);
     
     % Re-Format the Stimuli Config file into a useful table:
@@ -71,7 +75,6 @@ try
     WriteStructsToText(path, stim_config_p); % for testing
     
     % Begin logging now, because we have the subject_code
-    if ~exist('logs','dir'); mkdir('logs'); end;
     fileID = fopen([ 'logs/' subject_code '-' start_time '.txt'],'w');
     fclose(fileID);
     log_msg(sprintf('Set base dir: %s',base_dir));
@@ -254,8 +257,6 @@ try
             % On Each Block:
             this_block_rows = get_rows(stim_config_p, condition, this_phase, this_block);
             
-            % log_msg(what?);
-            
             % Do drift correct?:
             if record_phases(this_phase)
                 log_msg('Doing drift correct...');
@@ -272,7 +273,7 @@ try
                 trials = trials(idx);
             end
             
-            trial_index     = 1;
+            trial_index     = 0;
             new_trial_index = 1;
             while trial_index < length(trials)
                 trial_index = new_trial_index;
@@ -330,16 +331,14 @@ end
                 show_vid( trial_index, trial_config );
             
         elseif ~isempty( strfind(trial_config.StimType, 'custom') )
-            %% CUSTOM SCRIPT GOES HERE ----------------------
             
-            
-            
-            
-            
-            
-            
-            
-            % -----------------------------------------------
+            if ~exist('out_struct', 'var')
+                out_struct = struct(); 
+            end
+            now_recording = record_phases(this_phase);
+            [new_trial_index, out_struct] =...
+                custom_function(trial_index, trial_config, out_struct, wind, now_recording); %#ok<NASGU>
+             
         else
             errmsg = ['StimType "' trial_config.StimType '" is unsupported.'];
             error(errmsg);
@@ -1106,7 +1105,6 @@ end
             end
             
             % save session file
-            if ~exist('sessions', 'dir'); mkdir('sessions'); end;
             filename = [base_dir 'sessions/' subject_code '.txt'];
             log_msg(sprintf('Saving results file to %s',filename), 0);
             WriteStructsToText(filename,results)
@@ -1178,14 +1176,15 @@ end
             % For each column entry...
             for i = 1:col_len
                 
-                if strcmpi(col_name, 'trial')
+                 if strcmpi(col_name, 'trial')
                     % For the 'trial' column, they don't have to specify
                     % number of trials, it can be determined based on
                     % stimuli path:
                     
                     % Get stim information:
                     stim_path = config_struct(i).('Stimuli');
-                    if isempty( strfind( config_struct(i).('Stimuli') , '.' ) )
+                    if      isempty( strfind( config_struct(i).('Stimuli') , '.' ) ) ...
+                        &&  isempty( strfind( config_struct(i).('StimType'), 'custom') )
                         % is directory
                         stim_paths{i} = comb_dir(stim_path, 1);
                         stim_paths{i} = stim_paths{i}(cellfun(@(x) ~iscell(x), stim_paths{i})); %no subdirs
