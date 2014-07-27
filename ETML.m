@@ -307,7 +307,7 @@ catch my_err
     log_msg(num2str([my_err.stack.line]), 0);
     
     if exist('this_phase', 'var')
-        record_phases(this_phase) = 0; % any clean-up messages will not be sent to the ET, since it's no longer recording
+        record_phases(this_phase) = 0; % any clean-up messages won't be sent to ET, since it's no longer recording
     end
     
     if ~strcmpi(my_err.message,'Experiment ended.')
@@ -1076,7 +1076,8 @@ end
             results = struct('key',{},'value',{});
             
             [ year, month, day, hour, minute, sec ] = datevec(now);
-            end_time = [num2str(year) '-' num2str(month) '-' num2str(day) ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
+            end_time = ...
+                [num2str(year) '-' num2str(month) '-' num2str(day) ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
             
             results(length(results) + 1).key = 'Start Time';
             results(length(results)).value = start_time;
