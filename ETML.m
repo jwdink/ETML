@@ -340,9 +340,8 @@ end
             if ~exist('out_struct', 'var')
                 out_struct = struct(); 
             end
-            now_recording = session.record_phases(trial_config.('Phase'));
             [new_trial_index, out_struct] =...
-                custom_function(wind, trial_index, trial_config, out_struct, now_recording); %#ok<NASGU>
+                custom_function(wind, trial_index, trial_config, out_struct); %#ok<NASGU>
              
         else
             errmsg = ['StimType "' trial_config.StimType '" is unsupported.'];
@@ -471,7 +470,7 @@ end
         mov_rate = 1;
         
         % Open Movie(s):
-        win_rect = session.win_rect;
+        win_rect = session.win_rect; % so that repetitive loop doesn't have to access global var
         [movie mov_dur fps imgw imgh] = ...
             Screen('OpenMovie', wind, [session.base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
         if blip
