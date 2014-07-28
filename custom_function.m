@@ -1,5 +1,5 @@
 function [ new_trial_index, out_struct ] = ...
-    custom_function( trial_index, trial_config, out_struct, wind, now_recording) %#ok<INUSD>
+    custom_function(wind, trial_index, trial_config, out_struct, now_recording) %#ok<INUSL,INUSD>
 
 % %
 %

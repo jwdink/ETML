@@ -2,100 +2,109 @@ function [my_err] = ETML (base_dir, session_info)
 
 my_err = [];
 
+%% LOAD CONFIGURATION %%
+
+PsychJavaTrouble;
+
+% Global Structs for this session:
+global el 
+global session 
+
+% Get experiment directory:
+if nargin < 1
+    session.base_dir = [ uigetdir([], 'Select experiment directory') '/' ];
+else
+    session.base_dir = base_dir;
+end
+
+cd(session.base_dir); %
+
+% Load the tab-delimited configuration files:
+session.config = ReadStructsFromTextW('config.txt');
+stim_config = ReadStructsFromTextW('stim_config.txt');
+if exist( 'interest_areas.txt', 'file')
+    IA_config = ReadStructsFromTextW('interest_areas.txt');
+end
+
+% Re-Format the Interest Area Config file into a useful table:
+% * TO DO *
+
+% Create Necessary Folders:
+if ~exist('logs','dir'); mkdir('logs'); end;
+if ~exist('sessions', 'dir'); mkdir('sessions'); end;
+
+sprintf('You are running %s\n\n', get_config('StudyName'));
+
 try
-    %% LOAD CONFIGURATION %%
-    
-    % Get experiment directory:
-    if nargin < 1
-        base_dir = [ uigetdir([], 'Select experiment directory') '/' ];
-    end
-    
-    cd(base_dir); %
-    
-    % Load the tab-delimited configuration files:
-    config = ReadStructsFromTextW('config.txt');
-    stim_config = ReadStructsFromTextW('stim_config.txt');
-    if exist( 'interest_areas.txt', 'file')
-        IA_config = ReadStructsFromTextW('interest_areas.txt');
-    end
-    
-    % Re-Format the Interest Area Config file into a useful table:
-    % * TO DO *
-    
-    % Create Necessary Folders:
-    if ~exist('logs','dir'); mkdir('logs'); end;
-    if ~exist('sessions', 'dir'); mkdir('sessions'); end;
-    
-    sprintf('You are running %s\n\n', get_config('StudyName'));
-    
     %% SET UP EXPERIMENT AND SET SESSION VARIABLES %%
     
     % Turn off warnings, set random seed:
-    warning('off','all');
-    random_seed = sum(clock);
-    rand('twister',random_seed); %#ok<RAND>
-    PsychJavaTrouble;
+    session.random_seed = sum(clock);
+    rand('twister', session.random_seed); %#ok<RAND>
     commandwindow;
     
     % Get Date/Time
     [ year, month, day, hour, minute, sec ] = datevec(now);
-    start_time =...
+    session.start_time =...
         [num2str(year) '-' num2str(month) '-' num2str(day) ...
         ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
     
     % Get subject code
-    dummy_mode = get_config('DummyMode'); % not tracking eyes
-    debug_mode = get_config('DebugMode'); % debugging tools (e.g. windowed)
-    if ~debug_mode
+    session.dummy_mode = get_config('DummyMode'); % not tracking eyes
+    session.debug_mode = get_config('DebugMode'); % debugging tools (e.g. windowed)
+    if ~session.debug_mode
         if nargin < 2
-            experimenter = input('Enter your (experimenter) initials: ','s');
-            subject_code = input('Enter subject code: ', 's');
-            condition = input('Enter condition: ', 's');
-            condition = str2double(condition);  
+            session.experimenter = input('Enter your (experimenter) initials: ','s');
+            session.subject_code = input('Enter subject code: ', 's');
+            session.condition = str2double( input('Enter condition: ', 's') );
         else
-            experimenter = session_info{1};
-            subject_code = session_info{2};
-            condition    = session_info{3};
-            if ischar(condition)
-                condition = str2double(condition);
+            session.experimenter = session_info{1};
+            session.subject_code = session_info{2};
+            session.condition    = session_info{3};
+            if ischar(session.condition)
+                session.condition = str2double(session.condition);
             end
         end
     else
-        experimenter = 'null';
-        subject_code = '0';
-        condition = 1;
+        session.experimenter = 'null';
+        session.subject_code = '0';
+        session.condition = 1;
     end
     
+    % Find out which phases will be recording (needed before calling
+    % log_msg):
+    session.record_phases = eval(get_config('RecordingPhases'));
+    
     % Make trial-data folder:
-    mkdir('data', subject_code);
+    mkdir('data', session.subject_code);
     
     % Re-Format the Stimuli Config file into a useful table:
     stim_config_p = pad_struct(stim_config);
-    path = ['data/', subject_code, '/' 'trial_record.txt'];
+    path = ['data/', session.subject_code, '/' 'trial_record.txt'];
     WriteStructsToText(path, stim_config_p); % for testing
     
     % Begin logging now, because we have the subject_code
-    fileID = fopen([ 'logs/' subject_code '-' start_time '.txt'],'w');
-    fclose(fileID);
-    log_msg(sprintf('Set base dir: %s',base_dir));
+    session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'w');
+    fclose(session.fileID);
+    log_msg(sprintf('Set base dir: %s', session.base_dir));
     log_msg('Loaded config file');
     log_msg(sprintf('Study name: %s',get_config('StudyName')));
-    log_msg(sprintf('Random seed set as %s via "twister"',num2str(random_seed)));
-    log_msg(sprintf('Start time: %s',start_time));
-    log_msg(sprintf('Experimenter: %s',experimenter));
-    log_msg(sprintf('Subject Code: %s',subject_code));
-    log_msg(sprintf('Condition: %d ',condition));
+    log_msg(sprintf('Random seed set as %s via "twister"',num2str(session.random_seed)));
+    log_msg(sprintf('Start time: %s', session.start_time));
+    log_msg(sprintf('Experimenter: %s', session.experimenter));
+    log_msg(sprintf('Subject Code: %s', session.subject_code));
+    log_msg(sprintf('Condition: %d ', session.condition));
     
     % Initiate data structure for session file
-    session_data = struct('key',{},'value',{});
+    session.data = struct('key',{},'value',{});
     
     % Key controls
-    next_key = 'RightArrow';
-    prev_key = 'LeftArrow';
+    session.next_key = 'RightArrow';
+    session.prev_key = 'LeftArrow';
     
     % Wait for experimenter to press Enter to begin
     disp(upper(sprintf('\n\nPress any key to launch the experiment window\n\n')));
-    if ~debug_mode
+    if ~session.debug_mode
         KbWait([], 2);
     end
     
@@ -103,16 +112,18 @@ try
     
     %% SET UP SCREEN %%
     
-    GL = struct();
+    % An OpenGL struct needed for mirroring texture.
+    % Note that this has scope that spans multiple functions, but it's not
+    % global. This is to improve performance, but it means this GL var can't 
+    % be used in other functions not in this script.
+    GL = struct(); 
     InitializeMatlabOpenGL([],[],1); 
     
-    if dummy_mode
+    if session.dummy_mode
         % skip sync tests for faster load
         Screen('Preference','SkipSyncTests', 1);
         log_msg('Running in DebugMode');
     else
-        % shut up
-        Screen('Preference', 'SuppressAllWarnings', 1);
         log_msg('Not running in DebugMode');
         % disable the keyboard
         ListenChar(2);
@@ -120,20 +131,20 @@ try
     end
     
     % Create window
-    bg_color = get_config('BackgroundColor');
-    background_color = [bg_color bg_color bg_color];
+    session.background_color = get_config('BackgroundColor');
+    session.background_color = repmat(session.background_color, 1, 3);
     resolution = eval(get_config('ScreenRes'));
-    if dummy_mode
+    if session.dummy_mode
         refresh_rate = [];
     else
         refresh_rate = get_config('RefreshRate');
     end
-    if debug_mode
+    if session.debug_mode
         res = [0, 0, resolution(1), resolution(2)];
-        [wind, win_rect] = Screen('OpenWindow',max(Screen('Screens')),background_color,  res);
+        [wind, session.win_rect] = Screen('OpenWindow',max(Screen('Screens')),session.background_color,  res);
     else
         SetResolution(max(Screen('Screens')),resolution(1),resolution(2),refresh_rate);
-        [wind, win_rect] = Screen('OpenWindow',max(Screen('Screens')),background_color );
+        [wind, session.win_rect] = Screen('OpenWindow',max(Screen('Screens')),session.background_color );
     end
     
     log_msg( sprintf('Using screen #',num2str(max(Screen('Screens')))) ); %#ok<CTPCT>
@@ -142,20 +153,20 @@ try
     Screen('BlendFunction', wind, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     % grab height and width of screen
-    swidth  = win_rect(3)-win_rect(1);
-    sheight = win_rect(4)-win_rect(2);
+    session.swidth  = session.win_rect(3)-session.win_rect(1);
+    session.sheight = session.win_rect(4)-session.win_rect(2);
     
     % Screen and text color:
     Screen('TextFont', wind, 'Helvetica'); Screen('TextSize', wind, 15);
     % Make sure text color contrasts with background color:
-    if mean(background_color) < 255/2;
+    if mean(session.background_color) < 255/2;
         text_color = [255 255 255];
     else
         text_color = [0   0   0  ];
     end
     Screen('TextColor', wind, text_color)
     
-    log_msg(sprintf('Screen resolution is %s by %s',num2str(swidth),num2str(sheight)));
+    log_msg(sprintf('Screen resolution is %s by %s',num2str(session.swidth),num2str(session.sheight)));
     
     %% SET UP EYETRACKER
     
@@ -164,7 +175,7 @@ try
     % in a structure that also contains useful defaults
     % and control codes (e.g. tracker state bit and Eyelink key values).
     el = EyelinkInitDefaults(wind);
-    el.backgroundcolour = background_color; % might as well make things consistent
+    el.backgroundcolour = session.background_color; % might as well make things consistent
     
     priorityLevel = MaxPriority(wind);
     Priority(priorityLevel);
@@ -186,18 +197,18 @@ try
     log_msg(sprintf('Running experiment on a ''%s'' tracker.\n', vs ));
     
     % Set-up edf file
-    edf_file = [subject_code '.edf'];
-    edfERR  = Eyelink('Openfile', edf_file);
+    session.edf_file = [session.subject_code '.edf'];
+    edfERR  = Eyelink('Openfile', session.edf_file);
     
     if edfERR~=0
-        log_msg(sprintf('Cannot create EDF file ''%s'' ', edf_file));
+        log_msg(sprintf('Cannot create EDF file ''%s'' ', session.edf_file));
         post_experiment(true);
     end
     
     % Send some commands to eyetracker to set up event parsing:
     % (no idea what this does)
-    Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, win_rect(3)-1, win_rect(4)-1);
-    Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, win_rect(3)-1, win_rect(4)-1);
+    Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
+    Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
     
     Eyelink('command', 'select_parser_configuration 1');
     Eyelink('command', 'sample_rate = 1000');
@@ -215,11 +226,9 @@ try
     Screen('TextSize', wind, 25);
     DrawFormattedText(wind, 'Press any key to begin!', 'center', 'center');
     Screen('Flip', wind);
-    KbWait([], 2);
+     KbWait([], 2);
     log_msg('Experimenter has begun experiment.');
-    
-    record_phases = eval(get_config('RecordingPhases'));
-    
+
     phases = unique( [stim_config_p.('Phase')] );
     
     this_phase = 0;
@@ -227,10 +236,10 @@ try
         this_phase = this_phase + 1;
         
         % On Each Phase:
-        this_phase_rows = get_rows(stim_config_p, condition, this_phase);
+        this_phase_rows = get_rows(stim_config_p, session.condition, this_phase);
         
         % Calibrate the Eye Tracker?:
-        if record_phases(this_phase)
+        if session.record_phases(this_phase)
             log_msg('It is a recording phase.');
             
             while KbCheck(); end;
@@ -255,10 +264,10 @@ try
             this_block = this_block + 1;
             
             % On Each Block:
-            this_block_rows = get_rows(stim_config_p, condition, this_phase, this_block);
+            this_block_rows = get_rows(stim_config_p, session.condition, this_phase, this_block);
             
             % Do drift correct?:
-            if record_phases(this_phase)
+            if session.record_phases(this_phase)
                 log_msg('Doing drift correct...');
                 drift_correct
             end
@@ -283,15 +292,15 @@ try
                 this_trial = trials(trial_index);
                 
                 % On Each Trial:
-                this_trial_row = get_rows(stim_config_p, condition, this_phase, this_block, this_trial);
+                this_trial_row = get_rows(stim_config_p, session.condition, this_phase, this_block, this_trial);
                 
-                if record_phases(this_phase)
+                if session.record_phases(this_phase)
                     start_recording(trial_index, stim_config_p(this_trial_row));
                 end
                 
-                new_trial_index = show_stimuli( trial_index , stim_config_p(this_trial_row) );
+                new_trial_index = show_stimuli(wind, trial_index , stim_config_p(this_trial_row), GL);
                 
-                if record_phases(this_phase)
+                if session.record_phases(this_phase)
                     stop_recording(trial_index, stim_config_p(this_trial_row));
                 end
             end
@@ -303,12 +312,8 @@ try
     
 catch my_err
         
-    log_msg(my_err.message, 0);
-    log_msg(num2str([my_err.stack.line]), 0);
-    
-    if exist('this_phase', 'var')
-        record_phases(this_phase) = 0; % any clean-up messages won't be sent to ET, since it's no longer recording
-    end
+    log_msg(my_err.message);
+    log_msg(num2str([my_err.stack.line]));
     
     if ~strcmpi(my_err.message,'Experiment ended.')
         post_experiment(true);
@@ -317,51 +322,33 @@ catch my_err
 end
 
 %% FXN_show_stimuli
-    function [new_trial_index] = show_stimuli ( trial_index, trial_config )
+    function [new_trial_index] = show_stimuli (wind, trial_index, trial_config, GL)
         
         if     ~isempty( strfind(trial_config.StimType, 'img') ) || ...
                ~isempty( strfind(trial_config.StimType, 'slideshow') )
 
             new_trial_index = ...
-                show_img( trial_index, trial_config );
+                show_img(wind, trial_index, trial_config, GL);
             
         elseif strfind(trial_config.StimType, 'vid')
             
             new_trial_index = ...
-                show_vid( trial_index, trial_config );
+                show_vid(wind, trial_index, trial_config, GL);
             
         elseif ~isempty( strfind(trial_config.StimType, 'custom') )
             
             if ~exist('out_struct', 'var')
                 out_struct = struct(); 
             end
-            now_recording = record_phases(this_phase);
+            now_recording = session.record_phases(trial_config.('Phase'));
             [new_trial_index, out_struct] =...
-                custom_function(trial_index, trial_config, out_struct, wind, now_recording); %#ok<NASGU>
+                custom_function(wind, trial_index, trial_config, out_struct, now_recording); %#ok<NASGU>
              
         else
             errmsg = ['StimType "' trial_config.StimType '" is unsupported.'];
             error(errmsg);
         end
         
-    end
-
-%% FXN_add_data
-    function add_data (data_key, data_value)
-        session_data(length(session_data) + 1).key = data_key;
-        session_data(length(session_data)).value = data_value;
-        
-        if isnumeric(data_key)
-            data_key = num2str(data_key);
-        end
-        if isnumeric(data_value)
-            data_value = num2str(data_value);
-        end
-        log_msg(sprintf('%s : %s',data_key, data_value),0);
-        if record_phases(this_phase)
-            WaitSecs(.002);
-            Eyelink('Message','!V TRIAL_VAR %s %s', data_key, data_value);
-        end
     end
 
 %% FXN_start_recording
@@ -372,42 +359,27 @@ end
         WaitSecs(0.100);
         
         % Send variables to EDF, session txt, and log txt:
-        add_data('condition',   trial_config.('Condition') );
-        add_data('phase',       trial_config.('Phase') );
-        add_data('this_block',  trial_config.('Block') );
-        add_data('trial',       trial_index );
-        add_data('stim',        trial_config.('Stimuli') );
+        add_data('condition',   trial_config.('Condition'), trial_config.('Phase'));
+        add_data('phase',       trial_config.('Phase'),     trial_config.('Phase'));
+        add_data('this_block',  trial_config.('Block'),     trial_config.('Phase'));
+        add_data('trial',       trial_index,                trial_config.('Phase'));
+        add_data('stim',        trial_config.('Stimuli'),   trial_config.('Phase'));
         
         other_fields = {'FlipX', 'FlipY', 'DimX', 'DimY'};
         
         for f = 1:length(other_fields)
             field = other_fields{f};
             if isfield(trial_config,field)
-                add_data(field,      trial_config.(field) );
+                add_data(field, trial_config.(field), trial_config.('Phase'));
             end
         end
         
         log_msg(...
             ['START_RECORDING_PHASE_', num2str(trial_config.('Phase')),...
             '_BLOCK_',                 num2str(trial_config.('Block')),...
-            '_TRIAL_',                 num2str(trial_index)] );
+            '_TRIAL_',                 num2str(trial_index)], ...
+        trial_config.('Phase'));
         
-        % Create interest areas for this trial
-        %         for ia = 1:length(interest_area)
-        %             % set interest area position, flip if stim is flipped.
-        %             [L T R B] = set_IA_rect(interest_area{ia});
-        %             Eyelink('Message', '!V IAREA RECTANGLE %d %d %d %d %d %s', ia, L, T, R, B,...
-        %                 ['phase_',  num2str(this_phase),...
-        %                 '_block_', num2str(this_block),...
-        %                 '_stim_',  num2str(stim_num), ...
-        %                 '_IA_',    num2str(ia)]);
-        %             log_msg( sprintf('iarea rectangle %d %d %d %d %d %s', ia, L, T, R, B,...
-        %                 ['phase_',  num2str(this_phase),...
-        %                 '_block_', num2str(this_block),...
-        %                 '_stim_',  num2str(stim_num), ...
-        %                 '_IA_',    num2str(ia)]) , ...
-        %             0); % don't redundantly send to ET
-        %         end
     end
 
 %% FXN_stop_recording
@@ -417,9 +389,10 @@ end
         log_msg(...
             ['STOP_RECORDING_PHASE_',  num2str(trial_config.('Phase')),...
             '_BLOCK_',                 num2str(trial_config.('Block')),...
-            '_TRIAL_',                 num2str(trial_index)] );
+            '_TRIAL_',                 num2str(trial_index)], ...
+        trial_config.('Phase') );
         
-        log_msg('StopRecording',0);
+        log_msg('StopRecording');
         Eyelink('StopRecording');
         WaitSecs(.01);
         Screen('Close');
@@ -430,7 +403,7 @@ end
 %% FXN_save_img_for_dv
     function save_img_for_dv (trial_index, trial_config, tex)
 
-        if record_phases(this_phase)
+        if session.record_phases(trial_config.('Phase'))
             
             if nargin < 3
                 imgpath = trial_config.('Stimuli');
@@ -440,57 +413,14 @@ end
                     '_phase_' num2str(trial_config.('Phase')) ...
                     '_block_' num2str(trial_config.('Block')) ...
                     '_trial_' num2str(trial_index) '.jpg' ];
-                imgpath = ['data/', subject_code, '/' imgname];
+                imgpath = ['data/', session.subject_code, '/' imgname];
                 imwrite(image_array, imgpath);
             end
             
-            log_msg(sprintf('!V IMGLOAD CENTER %s %d %d', imgpath, swidth/2, sheight/2)); % send to ET
+            log_msg(sprintf('!V IMGLOAD CENTER %s %d %d', imgpath, session.swidth/2, session.sheight/2), ...
+                trial_config.('Phase')); % send to ET
             
         end
-    end
-
-%% FXN_check_keypress
-    function [keycode] = check_keypress(last_keycode, trialend)
-        if nargin < 1
-            last_keycode = zeros(1,256);
-        end
-        if nargin < 2
-            trialend = 0;
-        end
-        
-        [~,~,keycode] = KbCheck();
-        
-        if trialend
-            keycode = zeros(1,256);
-        end
-        
-        % log keys:
-        keycode_diff = keycode - last_keycode;
-        %  0 = key state hasn't changed
-        %  1 = key just pressed
-        % -1 = key just released
-        released_keys = find(keycode_diff < 0);
-        pressed_keys  = find(keycode_diff > 0);
-        
-        for i = 1:length(released_keys)
-            log_msg(sprintf( 'Key released: %s', KbName(released_keys(i)) ))
-        end
-        for i = 1:length(pressed_keys)
-            log_msg(sprintf( 'Key pressed: %s',  KbName(pressed_keys(i))  ))
-        end
-        
-        % check for escape:
-        if length(pressed_keys) == 1
-            if strcmpi( KbName(pressed_keys) , 'Escape' )
-                WaitSecs(.5);
-                [~,~,keycode] = KbCheck();
-                if strcmpi(KbName(keycode),'Escape')
-                    log_msg('Aborting experiment due to ESCAPE key press.');
-                    post_experiment(true);
-                end
-            end
-        end
-        
     end
 
 %% FXN_is_default
@@ -520,7 +450,7 @@ end
     end
 
 %% FXN_show_vid
-    function [new_trial_index, blip_time] = show_vid(trial_index, trial_config)
+    function [new_trial_index, blip_time] = show_vid(wind, trial_index, trial_config, GL)
         
         % Get trial info about blip:
         if isfield(trial_config, 'Blip')
@@ -541,23 +471,20 @@ end
         mov_rate = 1;
         
         % Open Movie(s):
+        win_rect = session.win_rect;
         [movie mov_dur fps imgw imgh] = ...
-            Screen('OpenMovie', wind, [base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
+            Screen('OpenMovie', wind, [session.base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
         if blip
-            [movieb] = open_blip_movie();
+            [movieb] = open_blip_movie(wind, trial_config);
             blip_time = rand(1) * (blip(2)-blip(1)) + blip(1); % random number between blip(1) & blip(2)
             blip_status = 0; % 0 = not started; 1 = in progress; -1 = completed
-            log_msg(['On this trial, the blip will happen at ' num2str(blip_time) ' secs.']);
-            if record_phases(this_phase)
-                add_data('blip_time', blip_time);
-            end
+            log_msg(['On this trial, the blip will happen at ' num2str(blip_time) ' secs.'], trial_config.('Phase'));
+            add_data('blip_time', blip_time, trial_config.('Phase'));
         else
             blip_time = NaN;
             blip_status = -1;
             if isfield(trial_config, 'Blip')
-                if record_phases(this_phase)
-                    add_data('blip_time', 'NaN');
-                end
+                add_data('blip_time', 'NaN', trial_config.('Phase'));
             end
         end
         
@@ -574,9 +501,7 @@ end
             else
                 tiv_tostart = 0;
             end
-            if record_phases(this_phase)
-                add_data('tiv_tostart', tiv_tostart);
-            end
+            add_data('tiv_tostart', tiv_tostart, trial_config.('Phase'));
         else
             tiv_tostart = 0;
         end
@@ -619,13 +544,11 @@ end
 
         % Save for DV:
         tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
-        save_to_dv = 1;
-        draw_tex(tex, trial_index, trial_config, save_to_dv);
-        Screen('FillRect', wind, background_color, win_rect);
+        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect, 'save_to_dv');
+        Screen('FillRect', wind, session.background_color, session.win_rect);
         Screen('Close',tex);
         Screen('Flip', wind);
         Screen('Flip', wind);
-        
         
         % Start playback(s):
         Screen('PlayMovie', movie , mov_rate);
@@ -637,13 +560,13 @@ end
         end
         Screen('SetMovieTimeIndex', movie, tiv_tostart);
 
-        log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')) );
+        log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')), trial_config.('Phase') );
         vid_start = GetSecs();
         
         keycode = check_keypress();
 
         while 1
-            keycode = check_keypress(keycode);
+            keycode = check_keypress(keycode, trial_config.('Phase'));
             
             if GetSecs() - vid_start >= duration
                 break % end movie
@@ -660,7 +583,7 @@ end
             
             % If texture is available, draw and Flip to screen:
             if  tex > 0 && sum(~blip)
-                draw_tex(tex, trial_index, trial_config);
+                draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
                 Screen('Close', tex );
                 Screen('Flip',wind, [], 0);
             end
@@ -671,17 +594,17 @@ end
                 texb = Screen('GetMovieImage', wind, movieb, 1);
                 if (tex > 0) && (texb > 0)
                     if     blip_status == -1                    % blip done or not happening
-                        draw_tex(tex, trial_index, trial_config);
+                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
                     elseif blip_status ==  0                    % blip will happen, but when?
                         if GetSecs() - vid_start > blip_time    % check to see if it's bliptime
                             blip_start = GetSecs();
                             blip_status = 1;
                         end
-                        draw_tex(texb, trial_index, trial_config);
-                        draw_tex(tex , trial_index, trial_config);
+                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
+                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
                     elseif blip_status ==  1                    % blip is happening
-                        draw_tex(tex , trial_index, trial_config);
-                        draw_tex(texb, trial_index, trial_config);
+                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
+                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
                         if GetSecs() - blip_start > .125        % <--- 125 ms.
                             blip_status = -1;
                         end
@@ -696,23 +619,23 @@ end
         
         % Close Movie(s):
         dropped_frames = Screen('PlayMovie',  movie, 0);
-        log_msg( sprintf('Dropped frames: %d', dropped_frames) );
+        log_msg( sprintf('Dropped frames: %d', dropped_frames) ,trial_config.('Phase'));
         Screen('CloseMovie', movie);
         if blip
             Screen('PlayMovie',  movieb, 0);
             Screen('CloseMovie', movieb);
         end
         Screen('Flip', wind);
-        log_msg('Video is over.');
+        log_msg('Video is over.', trial_config.('Phase'));
         
         Screen('Flip', wind);
-        check_keypress(keycode, 1); % flush currently pressed keys
+        check_keypress(keycode, trial_config.('Phase'), 'flush'); % flush currently pressed keys
         
         new_trial_index = trial_index + 1;
         WaitSecs(.1);
         
-        function [movieb] = open_blip_movie()
-            [pathstr, filename] = fileparts([base_dir trial_config.('Stimuli')]);
+        function [movieb] = open_blip_movie(wind, trial_config)
+            [pathstr, filename] = fileparts([session.base_dir trial_config.('Stimuli')]);
             
             
             blipdir = [pathstr, '/blip/'];
@@ -733,9 +656,10 @@ end
     end
 
 %% FXN_show_img
-    function [new_trial_index] = show_img(trial_index, trial_config)
+    function [new_trial_index] = show_img (wind, trial_index, trial_config, GL)
         
         stim_path = trial_config.('Stimuli');
+        win_rect = session.win_rect;
         
         % Get trial info about stim duration:
         if isfield(trial_config, 'Duration')
@@ -785,18 +709,18 @@ end
         end 
         
         % Get image:
-        image = imread(stim_path);                                  % read in image file
-        tex = Screen('MakeTexture', wind, image, [], [], [], 1);    % make texture
-        draw_tex(tex, trial_index, trial_config)                    % draw to window
+        image = imread(stim_path);                                      % read in image file
+        tex = Screen('MakeTexture', wind, image, [], [], [], 1);        % make texture
+        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);   % draw to window
         
         save_img_for_dv(trial_index, trial_config);
         
-        if dummy_mode
+        if session.dummy_mode
             % Draw Interest Areas
         end
         
         while KbCheck; end; % if keypress from prev slide is still happening, we wait til its over
-        log_msg( sprintf('Displaying Image: %s', stim_path) );
+        log_msg( sprintf('Displaying Image: %s', stim_path) , trial_config.('Phase'));
         image_start = GetSecs();
         Screen('Flip', wind);
         
@@ -815,14 +739,14 @@ end
                 end
             end
             
-            keycode = check_keypress(keycode);
+            keycode = check_keypress(keycode, trial_config.('Phase'));
             
             if slideshow
                 % if it's a slideshow, then they can sift thru the slides
-                if     strcmpi(KbName(keycode), next_key)
+                if     strcmpi(KbName(keycode), session.next_key)
                     close_image = 1;
                     new_trial_index = trial_index + 1;
-                elseif strcmpi(KbName(keycode), prev_key)
+                elseif strcmpi(KbName(keycode), session.prev_key)
                     close_image = 1;
                     new_trial_index = trial_index - 1;
                 end
@@ -840,17 +764,18 @@ end
             
         end
         
-        check_keypress(keycode, 'flush'); % flush currently pressed keys
+        check_keypress(keycode, trial_config.('Phase'), 'flush'); % flush currently pressed keys
         
     end
 
 %% FXN_draw_tex
-    function draw_tex(tex, trial_index, trial_config, save_to_dv)
+    function draw_tex (wind, tex, trial_index, trial_config, GL, win_rect, save_to_dv)
 
-        % IMPORTANT: any tex made with Screen('MakeTexture') must have been
-        % created with textureOrientation = 1. See Screen('MakeTexture?')
+        % IMPORTANT: To work in this function, any tex made with
+        % Screen('MakeTexture') must have been created with
+        % textureOrientation = 1. See Screen('MakeTexture?')
         
-        if nargin < 4
+        if nargin < 7
             save_to_dv = 0;
         end
         
@@ -901,6 +826,7 @@ end
                 tex_rect(4) = tex_rect(4) * str2double(DimY)/100;
             end
         end
+        
         dest_rect = CenterRect(tex_rect, win_rect);
         
         theight = tex_rect_o(4) - tex_rect_o(2);
@@ -934,8 +860,8 @@ end
 
 %% FXN_get_config
     function [value] = get_config (name)
-        matching_param = find(cellfun(@(x) strcmpi(x, name), {config.Parameter}));
-        value = [config(matching_param).Setting]; %#ok<FNDSB>
+        matching_param = find(cellfun(@(x) strcmpi(x, name), {session.config.Parameter}));
+        value = [session.config(matching_param).Setting]; %#ok<FNDSB>
         
         % replace quotes so we get pure values
         value = strrep(value, '"', '');
@@ -953,33 +879,6 @@ end
         else
             value = input;
         end
-    end
-
-%% FXN_log_msg
-    function log_msg (msg,sendtoET)
-        
-        fprintf('\n# %s\n',msg);
-        
-        if nargin < 2
-            sendtoET = 1;
-        end
-        fileID = fopen([ 'logs/' subject_code '-' start_time '.txt'],'a');
-        
-        [ year, month, day, hour, minute, sec ] = datevec(now);
-        timestamp = [num2str(year) '-' num2str(month) '-' num2str(day) ...
-            ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
-        
-        fprintf(fileID,'%s \t%s\n',timestamp,msg);
-        fclose(fileID);
-        
-        if sendtoET
-            if exist('record_phases','var')
-                if record_phases(this_phase)
-                    Eyelink('Message',msg);
-                end
-            end
-        end
-        
     end
 
 %% FXN_get_rows
@@ -1039,7 +938,7 @@ end
 %% FXN_post_experiment
     function post_experiment (aborted)
         
-        log_msg('Experiment ended', 0);
+        log_msg('Experiment ended');
         
         ShowCursor();
         
@@ -1054,13 +953,13 @@ end
         Eyelink('closefile');
         
         try
-            fprintf('Receiving data file ''%s''\n', edf_file );
+            fprintf('Receiving data file ''%s''\n', session.edf_file );
             status = Eyelink('ReceiveFile');
             if status > 0
                 fprintf('ReceiveFile status %d\n', status);
             end
         catch %#ok<CTCH>
-            log_msg(sprintf('Problem receiving data file ''%s''\n', edf_file ));
+            log_msg(sprintf('Problem receiving data file ''%s''\n', session.edf_file ));
         end
         
         Eyelink('ShutDown');
@@ -1080,34 +979,27 @@ end
                 [num2str(year) '-' num2str(month) '-' num2str(day) ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
             
             results(length(results) + 1).key = 'Start Time';
-            results(length(results)).value = start_time;
+            results(length(results)).value = session.start_time;
             results(length(results) + 1).key = 'End Time';
             results(length(results)).value = end_time;
-            %             results(length(results) + 1).key = 'Status';
-            %             if (aborted == true)
-            %                 % This will never be true. Bug?
-            %                 results(length(results)).value = 'ABORTED!';
-            %             else
-            %                 results(length(results)).value = 'Completed';
-            %             end
             results(length(results) + 1).key = 'Experimenter';
-            results(length(results)).value = experimenter;
+            results(length(results)).value = session.experimenter;
             results(length(results) + 1).key = 'Subject Code';
-            results(length(results)).value = subject_code;
+            results(length(results)).value = session.subject_code;
             results(length(results) + 1).key = 'Condition';
-            results(length(results)).value = condition;
+            results(length(results)).value = session.condition;
             results(length(results) + 1).key = 'Comments';
             results(length(results)).value = comments{1};
             
             % merge in data
-            for i = 1:length(session_data)
-                results(length(results) + 1).key = session_data(i).key;
-                results(length(results)).value = session_data(i).value;
+            for i = 1:length(session.data)
+                results(length(results) + 1).key = session.data(i).key;
+                results(length(results)).value = session.data(i).value;
             end
             
             % save session file
-            filename = [base_dir 'sessions/' subject_code '.txt'];
-            log_msg(sprintf('Saving results file to %s',filename), 0);
+            filename = [session.base_dir 'sessions/' subject_code '.txt'];
+            log_msg(sprintf('Saving results file to %s',filename));
             WriteStructsToText(filename,results)
         else
             disp('Experiment aborted - results file not saved, but there is a log.');
@@ -1117,13 +1009,13 @@ end
     end
 
 %% FXN_comb_dir
-    function [paths] = comb_dir (directory,hierarchical)
+    function [paths] = comb_dir (directory, hierarchical)
         % Recursive folder look-up
         if nargin<1
-            directory=cd;
+            directory = cd;
         end
         if nargin<2
-            hierarchical=0;
+            hierarchical = 0;
         end
         
         if directory(end)=='/'
