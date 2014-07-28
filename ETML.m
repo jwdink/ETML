@@ -319,18 +319,20 @@ end
 %% FXN_show_stimuli
     function [new_trial_index] = show_stimuli (wind, trial_index, trial_config, GL)
         
-        if     ~isempty( strfind(trial_config.StimType, 'img') ) || ...
-               ~isempty( strfind(trial_config.StimType, 'slideshow') )
+        add_data('stim_type', trial_config.('StimType') );
+        
+        if     ~isempty( strfind(trial_config.('StimType'), 'img') ) || ...
+               ~isempty( strfind(trial_config.('StimType'), 'slideshow') )
 
             new_trial_index = ...
                 show_img(wind, trial_index, trial_config, GL);
             
-        elseif strfind(trial_config.StimType, 'vid')
+        elseif strfind(trial_config.('StimType'), 'vid')
             
             new_trial_index = ...
                 show_vid(wind, trial_index, trial_config, GL);
             
-        elseif ~isempty( strfind(trial_config.StimType, 'custom') )
+        elseif ~isempty( strfind(trial_config.('StimType'), 'custom') )
             
             if ~exist('out_struct', 'var')
                 out_struct = struct(); 
@@ -339,7 +341,7 @@ end
                 custom_function(wind, trial_index, trial_config, out_struct); %#ok<NASGU>
              
         else
-            errmsg = ['StimType "' trial_config.StimType '" is unsupported.'];
+            errmsg = ['StimType "' trial_config.('StimType') '" is unsupported.'];
             error(errmsg);
         end
         
