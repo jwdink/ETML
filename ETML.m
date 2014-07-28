@@ -562,7 +562,7 @@ end
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')), trial_config.('Phase') );
         vid_start = GetSecs();
         
-        keycode = check_keypress();
+        keycode = check_keypress([], trial_config.('Phase'));
 
         while 1
             keycode = check_keypress(keycode, trial_config.('Phase'));
@@ -723,7 +723,7 @@ end
         image_start = GetSecs();
         Screen('Flip', wind);
         
-        keycode = check_keypress();
+        keycode = check_keypress([], trial_config.('Phase'));
         close_image = 0;
         
         while ~close_image
