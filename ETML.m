@@ -289,6 +289,7 @@ try
                 if trial_index < 1
                     trial_index = 1;
                 end
+                log_msg( sprintf('Trial Index : %d', trial_index) ); % order of presentation
                 this_trial = trials(trial_index);
                 
                 % On Each Trial:
