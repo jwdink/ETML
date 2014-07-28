@@ -273,7 +273,6 @@ try
             end
             
             % Run Trials:
-            
             trials = unique( [stim_config_p(this_block_rows).('Trial')] );
             
             % Shuffle trial order?:
@@ -294,16 +293,11 @@ try
                 
                 % On Each Trial:
                 this_trial_row = get_rows(stim_config_p, session.condition, this_phase, this_block, this_trial);
-                
-                if session.record_phases(this_phase)
-                    start_recording(trial_index, stim_config_p(this_trial_row));
-                end
-                
+
+                start_trial(trial_index, stim_config_p(this_trial_row));
                 new_trial_index = show_stimuli(wind, trial_index , stim_config_p(this_trial_row), GL);
+                stop_trial(trial_index, stim_config_p(this_trial_row));
                 
-                if session.record_phases(this_phase)
-                    stop_recording(trial_index, stim_config_p(this_trial_row));
-                end
             end
         end
     end
@@ -351,26 +345,34 @@ end
         
     end
 
-%% FXN_start_recording
-    function start_recording(trial_index, trial_config)
+%% FXN_start_trial
+    function start_trial(trial_index, trial_config)
         
-        % Start recording eye position:
-        Eyelink('StartRecording');
-        WaitSecs(0.100);
-        
-        % Send variables to EDF, session txt, and log txt:
-        add_data('condition',   trial_config.('Condition'), trial_config.('Phase'));
-        add_data('phase',       trial_config.('Phase'),     trial_config.('Phase'));
-        add_data('this_block',  trial_config.('Block'),     trial_config.('Phase'));
-        add_data('trial',       trial_index,                trial_config.('Phase'));
-        add_data('stim',        trial_config.('Stimuli'),   trial_config.('Phase'));
+        if session.record_phases(trial_config.('Phase'));
+            % ET is recording:
+            phase = trial_config.('Phase');
+            
+            % Start recording eye position:
+            Eyelink('StartRecording');
+            WaitSecs(0.100);
+        else
+            % ET is not recording:
+            phase = [];
+        end
+
+        % Send variables to EDF (if recording), session txt, and log txt:
+        add_data('condition',   trial_config.('Condition'), phase);
+        add_data('phase',       trial_config.('Phase'),     phase);
+        add_data('this_block',  trial_config.('Block'),     phase);
+        add_data('trial',       trial_index,                phase);
+        add_data('stim',        trial_config.('Stimuli'),   phase);
         
         other_fields = {'FlipX', 'FlipY', 'DimX', 'DimY'};
         
         for f = 1:length(other_fields)
             field = other_fields{f};
             if isfield(trial_config,field)
-                add_data(field, trial_config.(field), trial_config.('Phase'));
+                add_data(field, trial_config.(field), phase);
             end
         end
         
@@ -378,25 +380,36 @@ end
             ['START_RECORDING_PHASE_', num2str(trial_config.('Phase')),...
             '_BLOCK_',                 num2str(trial_config.('Block')),...
             '_TRIAL_',                 num2str(trial_index)], ...
-        trial_config.('Phase'));
+        phase);
         
     end
 
-%% FXN_stop_recording
-    function stop_recording(trial_index, trial_config)
-        % Stop Recording, End trial
+%% FXN_stop_trial
+    function stop_trial(trial_index, trial_config)
+        
+        % End trial
+        if session.record_phases(trial_config.('Phase'));
+            % ET was recording:
+            phase = trial_config.('Phase');
+        else
+            % ET was not recording:
+            phase = [];
+        end
         
         log_msg(...
             ['STOP_RECORDING_PHASE_',  num2str(trial_config.('Phase')),...
             '_BLOCK_',                 num2str(trial_config.('Block')),...
             '_TRIAL_',                 num2str(trial_index)], ...
-        trial_config.('Phase') );
+            phase );
         
-        log_msg('StopRecording');
-        Eyelink('StopRecording');
-        WaitSecs(.01);
-        Screen('Close');
-        Eyelink('Message', 'TRIAL_RESULT 0');
+        if ~isempty(phase)
+            % We were recording:
+            log_msg('StopRecording');
+            Eyelink('StopRecording');
+            WaitSecs(.01);
+            Screen('Close');
+            Eyelink('Message', 'TRIAL_RESULT 0');
+        end
         
     end
 
