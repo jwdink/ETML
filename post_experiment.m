@@ -14,23 +14,39 @@ Screen('CloseAll');
 Screen('Preference', 'SuppressAllWarnings', 0);
 
 commandwindow;
-Eyelink('StopRecording');
-Eyelink('closefile');
 
+% Close EL (I'm not proud of this code):
 try
-    fprintf('Receiving data file ''%s''\n', session.edf_file );
-    status = Eyelink('ReceiveFile');
-    if status > 0
-        fprintf('ReceiveFile status %d\n', status);
+    if aborted
+        Eyelink('StopRecording');
     end
-catch my_err
-    log_msg(sprintf('Problem receiving data file ''%s''\n', session.edf_file ));
-    log_msg(my_err.message);
-    log_msg(num2str([my_err.stack.line]));
+    
+    Eyelink('closefile');
+    try
+        log_msg(sprintf('Receiving data file "%s"', session.edf_file ));
+        status = Eyelink('ReceiveFile');
+        if status > 0
+            log_msg(sprintf('ReceiveFile status %d', status));
+        end
+    catch my_err
+        log_msg(sprintf('Problem receiving data file ''%s''\n', session.edf_file ));
+        log_msg(my_err.message);
+        log_msg(num2str([my_err.stack.line]));
+    end
+    Eyelink('ShutDown');
+catch  %#ok<CTCH>
+    if aborted
+        disp('Experiment aborted - results file not saved, but there is a log.');
+        error('Experiment Ended.');
+    else
+        disp(['There seems to have been a problem shutting down the eyelink '...
+              'system-- session txt file has not been generated.']);
+        error('Experiment Ended.');
+    end
 end
 
-Eyelink('ShutDown');
 
+% Save session data:
 if ~aborted
     % get experimenter comments
     comments = inputdlg('Enter your comments about attentiveness, etc.:','Comments',3);
@@ -65,7 +81,7 @@ if ~aborted
     end
     
     % save session file
-    filename = [session.base_dir 'sessions/' subject_code '.txt'];
+    filename = [session.base_dir 'sessions/' session.subject_code '.txt'];
     log_msg(sprintf('Saving results file to %s',filename));
     WriteStructsToText(filename,results)
 else

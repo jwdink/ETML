@@ -879,7 +879,9 @@ end
         value = [session.config(matching_param).Setting]; %#ok<FNDSB>
         
         % replace quotes so we get pure values
-        value = strrep(value, '"', '');
+        if ischar(value) || iscell(value)
+            value = strrep(value, '"', '');
+        end
     end
 
 %% FXN_smart_eval
