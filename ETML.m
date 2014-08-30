@@ -857,6 +857,12 @@ end
         
         % Draw the texture:
         if save_to_dv
+            % Record the stimulus dimensions to the data file:
+            add_data('StimY', theight, trial_config.('Phase') );
+            add_data('StimX', twidth,  trial_config.('Phase') );
+            
+            % Draw an example image for the background of a dataviewer
+            % application:
             offwind = Screen('OpenOffscreenWindow', wind);
             Screen('DrawTexture', offwind, tex, [], dest_rect);
             save_img_for_dv(trial_index, trial_config, offwind);
