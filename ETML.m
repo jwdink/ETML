@@ -457,23 +457,8 @@ end
     end
 
 %% FXN_show_vid
-    function [new_trial_index, blip_time] = show_vid(wind, trial_index, trial_config, GL)
+    function [new_trial_index] = show_vid(wind, trial_index, trial_config, GL)
         
-        % Get trial info about blip:
-        if isfield(trial_config, 'Blip')
-            blip_config = smart_eval(trial_config.('Blip'));
-            if is_default(blip_config)
-                blip = 0;
-            else
-                if rand > .5 % even with blip setting on, it only happens on 50% of trials
-                    blip = 0;
-                else
-                    blip = blip_config;
-                end
-            end
-        else
-            blip = 0;
-        end
     
         mov_rate = 1;
         
@@ -481,20 +466,7 @@ end
         win_rect = session.win_rect; % so that repetitive loop doesn't have to access global var
         [movie mov_dur fps imgw imgh] = ...
             Screen('OpenMovie', wind, [session.base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
-        if blip
-            [movieb] = open_blip_movie(wind, trial_config);
-            blip_time = rand(1) * (blip(2)-blip(1)) + blip(1); % random number between blip(1) & blip(2)
-            blip_status = 0; % 0 = not started; 1 = in progress; -1 = completed
-            log_msg(['On this trial, the blip will happen at ' num2str(blip_time) ' secs.'], trial_config.('Phase'));
-            add_data('blip_time', blip_time, trial_config.('Phase'));
-        else
-            blip_time = NaN;
-            blip_status = -1;
-            if isfield(trial_config, 'Blip')
-                add_data('blip_time', 'NaN', trial_config.('Phase'));
-            end
-        end
-        
+
         % Custom Start time [jitter]?:
         if isfield(trial_config, 'TimeInVidToStart')
             tiv_config = smart_eval(trial_config.('TimeInVidToStart'));
@@ -563,12 +535,7 @@ end
         
         % Start playback(s):
         Screen('PlayMovie', movie , mov_rate);
-        WaitSecs(.25);
-        if blip
-            Screen('PlayMovie', movieb, mov_rate);
-            WaitSecs(.25);
-            Screen('SetMovieTimeIndex', movieb, tiv_tostart);
-        end
+        WaitSecs(.10);
         Screen('SetMovieTimeIndex', movie, tiv_tostart);
 
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')), trial_config.('Phase') );
@@ -593,38 +560,12 @@ end
             tex  = Screen('GetMovieImage', wind, movie,  1);
             
             % If texture is available, draw and Flip to screen:
-            if  tex > 0 && sum(~blip)
+            if  tex > 0
                 draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
                 Screen('Close', tex );
                 Screen('Flip',wind, [], 0);
             end
             
-            % If blip setting is on, drawing/flipping to screen is slightly more
-            % complicated:
-            if blip
-                texb = Screen('GetMovieImage', wind, movieb, 1);
-                if (tex > 0) && (texb > 0)
-                    if     blip_status == -1                    % blip done or not happening
-                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
-                    elseif blip_status ==  0                    % blip will happen, but when?
-                        if GetSecs() - vid_start > blip_time    % check to see if it's bliptime
-                            blip_start = GetSecs();
-                            blip_status = 1;
-                        end
-                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
-                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
-                    elseif blip_status ==  1                    % blip is happening
-                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
-                        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
-                        if GetSecs() - blip_start > .125        % <--- 125 ms.
-                            blip_status = -1;
-                        end
-                    end
-                    Screen('Close', tex );
-                    Screen('Close', texb);
-                    Screen('Flip',wind, 0, 0);
-                end
-            end
 
         end % end movie loop
         
@@ -632,10 +573,6 @@ end
         dropped_frames = Screen('PlayMovie',  movie, 0);
         log_msg( sprintf('Dropped frames: %d', dropped_frames) ,trial_config.('Phase'));
         Screen('CloseMovie', movie);
-        if blip
-            Screen('PlayMovie',  movieb, 0);
-            Screen('CloseMovie', movieb);
-        end
         Screen('Flip', wind);
         log_msg('Video is over.', trial_config.('Phase'));
         
@@ -644,26 +581,7 @@ end
         
         new_trial_index = trial_index + 1;
         WaitSecs(.1);
-        
-        function [movieb] = open_blip_movie(wind, trial_config)
-            [pathstr, filename] = fileparts([session.base_dir trial_config.('Stimuli')]);
-            
-            
-            blipdir = [pathstr, '/blip/'];
-            if ~exist(blipdir, 'dir')
-                 blipdir = [pathstr, '/Blip/'];
-            end
-            blipdirstr = dir(blipdir);
-            blipfiles = {blipdirstr.name};
-            
-            b_i = ~cellfun(@isempty, strfind(blipfiles, filename) );
-            blipfile = blipfiles(b_i);
-            
-            stim_blip = [blipdir blipfile{1}];
 
-            [movieb durb fpsb imgwb imghb] = ...
-                Screen('OpenMovie', wind, stim_blip ); %#ok<NASGU,ASGLU>
-        end
     end
 
 %% FXN_show_img
