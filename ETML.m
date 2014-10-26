@@ -793,22 +793,12 @@ end
         end
         
         % Get Flip Config:
-        if isfield(trial_config, 'FlipX')
-            FlipX = trial_config.FlipX;
-        else
-            FlipX = 0;
-        end
-        if isfield(trial_config, 'FlipY')
-            FlipY = trial_config.FlipY;
-        else
-            FlipY = 0;
-        end
-        if FlipX
+        if isfield(trial_config, 'FlipX') && trial_config.FlipX
             x = -1;
         else
             x =  1;
         end
-        if FlipY
+        if isfield(trial_config, 'FlipY') && trial_config.FlipY
             y = -1;
         else
             y =  1;
