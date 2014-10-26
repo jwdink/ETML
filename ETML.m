@@ -804,9 +804,14 @@ end
             y =  1;
         end
         
-        % Get Dim config:
+        % Texture Dimensions:
         tex_rect = Screen('Rect', tex);
-        tex_rect_o = tex_rect; % original texrect, before stretching. required for flipX,Y to work
+        % original texrect, before stretching. required for flipX,Y to work:
+        tex_rect_o = tex_rect;
+        theight = tex_rect_o(4) - tex_rect_o(2);
+        twidth  = tex_rect_o(3) - tex_rect_o(1);
+        
+        % Get Dim config:
         if isfield(trial_config, 'DimX')
             DimX = trial_config.DimX;
             if ~( ischar(DimX) || is_default(DimX) )
@@ -817,6 +822,7 @@ end
                 DimX = strrep(DimX,'%','');
                 tex_rect(3) = tex_rect(3) * str2double(DimX)/100;
             end
+            % else, just use dim of image/vid (tex_rect)
         end
         if isfield(trial_config, 'DimY')
             DimY = trial_config.DimY;
@@ -828,19 +834,27 @@ end
                 DimY = strrep(DimY,'%','');
                 tex_rect(4) = tex_rect(4) * str2double(DimY)/100;
             end
+            % else, just use dim of image/vid (tex_rect)
         end
         
-        dest_rect = CenterRect(tex_rect, win_rect);
-        
-        theight = tex_rect_o(4) - tex_rect_o(2);
-        twidth  = tex_rect_o(3) - tex_rect_o(1);
-        
-        glMatrixMode(GL.TEXTURE); % don't know what this does.
-        glPushMatrix; % don't know what this does.
+        % Get Pos config:
+        if isfield(trial_config, 'StimCenterX') && ~is_default(trial_config.StimCenterX)
+            center_x = trial_config.StimCenterX;
+        else
+            center_x = win_rect(3) / 2;
+        end
+        if isfield(trial_config, 'StimCenterY') && ~is_default(trial_config.StimCenterY)
+            center_y = trial_config.StimCenterY;
+        else
+            center_y = win_rect(4) / 2;
+        end
+        dest_rect = CenterRectOnPoint(tex_rect, center_x, center_y);
         
         % Mirroring/Flipping the texture is done along the center of the tex.
         % Therefore, to flip/mirror properly, we need to displace the texture,
         % flip/mirror it, and then put it back in its original place:
+        glMatrixMode(GL.TEXTURE); % needed for some obscure reason.
+        glPushMatrix; % needed for some obscure reason.
         glTranslatef(twidth/2, theight/2, 0);
         glScalef(x,y,1);
         glTranslatef(-twidth/2, -theight/2, 0);
@@ -850,6 +864,8 @@ end
             % Record the stimulus dimensions to the data file:
             add_data('StimDimY', theight, trial_config.('Phase') );
             add_data('StimDimX', twidth,  trial_config.('Phase') );
+            add_data('StimCenterX', center_x, trial_config.('Phase') );
+            add_data('StimCenterY', center_y, trial_config.('Phase') );
             
             % Draw an example image for the background of a dataviewer
             % application:
