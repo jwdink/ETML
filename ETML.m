@@ -791,6 +791,8 @@ end
                 Screen('DrawTexture', offwind, tex, [], dest_rect);
                 save_img_for_dv(trial_index, trial_config, offwind);
                 Screen('CopyWindow', offwind, wind);
+            else
+                Screen('DrawTexture', wind, tex, [], dest_rect);
             end
         else
             Screen('DrawTexture', wind, tex, [], dest_rect);
