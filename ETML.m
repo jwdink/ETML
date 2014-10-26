@@ -367,14 +367,10 @@ end
         end
 
         % Send variables to EDF (if recording), session txt, and log txt:
-        add_data('condition',   trial_config.('Condition'), phase);
-        add_data('phase',       trial_config.('Phase'),     phase);
-        add_data('this_block',  trial_config.('Block'),     phase);
-        add_data('trial',       trial_index,                phase);
-        add_data('stim',        trial_config.('Stimuli'),   phase);
-        
-        other_fields = {'FlipX', 'FlipY', 'DimX', 'DimY'};
-        
+        add_data('trial', trial_index, phase);
+        other_fields = {'Condition', 'Phase', 'Block', 'Stimuli', 'StimType', 'FlipX', 'FlipY'};
+        % also some fields that will be inserted at stim-presentation:
+        % 'DimX', 'DimY','StimCenterX', 'StimCenterY'
         for f = 1:length(other_fields)
             field = other_fields{f};
             if isfield(trial_config,field)
@@ -465,7 +461,6 @@ end
 %% FXN_show_vid
     function [new_trial_index] = show_vid(wind, trial_index, trial_config, GL)
         
-    
         mov_rate = 1;
         
         % Open Movie(s):
@@ -531,9 +526,9 @@ end
             end
         end  
 
-        % Save for DV:
+        % Save Stim Attributes:
         tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
-        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect, 'save_to_dv');
+        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect, 'save_stim_info');
         Screen('FillRect', wind, session.background_color, session.win_rect);
         Screen('Close',tex);
         Screen('Flip', wind);
@@ -572,7 +567,6 @@ end
                 Screen('Flip',wind, [], 0);
             end
             
-
         end % end movie loop
         
         % Close Movie(s):
@@ -646,12 +640,13 @@ end
         % Get image:
         image = imread(stim_path);                                      % read in image file
         tex = Screen('MakeTexture', wind, image, [], [], [], 1);        % make texture
-        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);   % draw to window
+        draw_tex(wind, tex, trial_index, trial_config, GL, win_rect, 'save_stim_info'); % draw
         
         save_img_for_dv(trial_index, trial_config);
         
         if session.dummy_mode
             % Draw Interest Areas
+            % --to do--
         end
         
         while KbCheck; end; % if keypress from prev slide is still happening, we wait til its over
@@ -704,14 +699,14 @@ end
     end
 
 %% FXN_draw_tex
-    function draw_tex (wind, tex, trial_index, trial_config, GL, win_rect, save_to_dv)
+    function draw_tex (wind, tex, trial_index, trial_config, GL, win_rect, save_stim_info)
 
         % IMPORTANT: To work in this function, any tex made with
         % Screen('MakeTexture') must have been created with
         % textureOrientation = 1. See Screen('MakeTexture?')
         
         if nargin < 7
-            save_to_dv = 0;
+            save_stim_info = 0;
         end
         
         % Get Flip Config:
@@ -782,19 +777,21 @@ end
         glTranslatef(-twidth/2, -theight/2, 0);
         
         % Draw the texture:
-        if save_to_dv
+        if save_stim_info
             % Record the stimulus dimensions to the data file:
             add_data('StimDimY', theight, trial_config.('Phase') );
             add_data('StimDimX', twidth,  trial_config.('Phase') );
             add_data('StimCenterX', center_x, trial_config.('Phase') );
             add_data('StimCenterY', center_y, trial_config.('Phase') );
             
-            % Draw an example image for the background of a dataviewer
-            % application:
-            offwind = Screen('OpenOffscreenWindow', wind);
-            Screen('DrawTexture', offwind, tex, [], dest_rect);
-            save_img_for_dv(trial_index, trial_config, offwind);
-            Screen('CopyWindow', offwind, wind);
+            if strcmpi( trial_config.('StimType') , 'video' )
+                % Draw an example image for the background of a dataviewer
+                % application:
+                offwind = Screen('OpenOffscreenWindow', wind);
+                Screen('DrawTexture', offwind, tex, [], dest_rect);
+                save_img_for_dv(trial_index, trial_config, offwind);
+                Screen('CopyWindow', offwind, wind);
+            end
         else
             Screen('DrawTexture', wind, tex, [], dest_rect);
         end
