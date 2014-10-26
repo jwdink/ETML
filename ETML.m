@@ -517,7 +517,11 @@ end
         if isfield(trial_config, 'Duration')
             dur_config = smart_eval(trial_config.('Duration'));
             if length(dur_config) > 1
-                duration = dur_config(2);
+                if dur_config(2) == 0
+                    duration = mov_dur * 1/mov_rate;
+                else
+                    duration = dur_config(2);
+                end
                 min_duration = dur_config(1);
             else
                 if is_default(dur_config)
