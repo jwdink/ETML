@@ -787,12 +787,12 @@ end
         end
         
         % Get Flip Config:
-        if isfield(trial_config, 'FlipX') && trial_config.FlipX
+        if isfield(trial_config, 'FlipX') && ~is_default(trial_config.FlipX) && trial_config.FlipX
             x = -1;
         else
             x =  1;
         end
-        if isfield(trial_config, 'FlipY') && trial_config.FlipY
+        if isfield(trial_config, 'FlipY') && ~is_default(trial_config.FlipY) && trial_config.FlipY
             y = -1;
         else
             y =  1;
