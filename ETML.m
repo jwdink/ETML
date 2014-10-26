@@ -275,6 +275,12 @@ try
             % Run Trials:
             trials = unique( [stim_config_p(this_block_rows).('Trial')] );
             
+            % Shuffle trial order?:
+            if stim_config_p(this_block_rows(1)).('ShuffleTrialsInBlock') 
+                idx = randperm(length(trials));
+                trials = trials(idx);
+            end
+            
             trial_index     = 0;
             new_trial_index = 1;
             while trial_index < length(trials)
@@ -980,7 +986,7 @@ end
                     num_trials = length(expanded_elem);
                     num_stim   = length(stim_paths{i});
                     
-                    if ~is_default( config_struct(i).('Random') ) && strcmpi( config_struct(i).('Random') , 'replace' )
+                    if ~is_default( config_struct(i).('RandStimSelection') ) && strcmpi( config_struct(i).('RandStimSelection') , 'replace' )
                         % random, without replacement
                         ind = datasample(1:num_stim, num_trials);
                     else
@@ -990,7 +996,7 @@ end
                             multipl = floor( num_trials / num_stim );
                             ind = repmat( 1:num_stim, 1, multipl);
                             diff = num_trials - length(ind);
-                            if ~is_default( config_struct(i).('Random') )
+                            if ~is_default( config_struct(i).('RandStimSelection') )
                                 leftover = randsample(num_stim, diff);
                                 ind = [ind leftover]; %#ok<AGROW>
                                 ind = ind(randperm(length(ind))) % shuffle
@@ -1002,7 +1008,7 @@ end
                         else
                             % If this folder's numstim >= numtrials, select subset:
                             % (if it's not a folder, this code does nothing)
-                            if ~is_default( config_struct(i).('Random') )
+                            if ~is_default( config_struct(i).('RandStimSelection') )
                                 % randomly select num_trials # of stimuli from
                                 % the folder with replacement
                                 ind = randsample(num_stim, num_trials);
