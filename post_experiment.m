@@ -81,7 +81,7 @@ if ~aborted
     end
     
     % save session file
-    filename = [session.base_dir 'sessions/' session.subject_code '.txt'];
+    filename = [session.base_dir '/sessions/' session.subject_code '.txt'];
     log_msg(sprintf('Saving results file to %s',filename));
     WriteStructsToText(filename,results)
 else
