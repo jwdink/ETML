@@ -368,8 +368,10 @@ end
 
         % Send variables to EDF (if recording), session txt, and log txt:
         add_data('trial', trial_index, phase);
-        other_fields = {'Condition', 'Phase', 'Block', 'Stimuli', 'StimType', 'FlipX', 'FlipY'};
-        % also some fields that will be inserted at stim-presentation:
+        other_fields1 = {'Condition', 'Phase', 'Block', 'Stimuli', 'StimType', 'FlipX', 'FlipY'};
+        other_fields2 = smart_eval( get_config('CustomFields') );
+        other_fields = [other_fields1 other_fields2];
+        % also some fields that will be inserted at stim-presentation (because they can be dynamically set):
         % 'DimX', 'DimY','StimCenterX', 'StimCenterY'
         for f = 1:length(other_fields)
             field = other_fields{f};
@@ -387,16 +389,15 @@ end
         if session.record_phases(trial_config.('Phase'));
             % ET was recording:
             phase = trial_config.('Phase');
+            log_msg(...
+                ['STOP_RECORDING_PHASE_',  num2str(trial_config.('Phase')),...
+                '_BLOCK_',                 num2str(trial_config.('Block')),...
+                '_TRIAL_',                 num2str(trial_index)], ...
+                phase );
         else
             % ET was not recording:
             phase = [];
         end
-        
-        log_msg(...
-            ['STOP_RECORDING_PHASE_',  num2str(trial_config.('Phase')),...
-            '_BLOCK_',                 num2str(trial_config.('Block')),...
-            '_TRIAL_',                 num2str(trial_index)], ...
-            phase );
         
         if ~isempty(phase)
             % We were recording:
@@ -812,20 +813,6 @@ end
         % replace quotes so we get pure values
         if ischar(value) || iscell(value)
             value = strrep(value, '"', '');
-        end
-    end
-
-%% FXN_smart_eval
-    function [value] = smart_eval (input)
-        if ischar(input)
-            input = strrep(input, '"', '');
-            if isempty(input)
-                value = [];
-            else
-                value = eval(input);
-            end
-        else
-            value = input;
         end
     end
 
