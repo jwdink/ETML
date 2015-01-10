@@ -37,7 +37,7 @@ function [ new_trial_index, out_struct ] = ...
 %
 %   'OUT_STRUCT' is a structure to which you can assign anything that you'd
 %   like to persist from trial-to-trial. For example, if what they see on
-%   trial n depends on how they performed on trial n, you could use the
+%   trial n depends on how they performed on trial n-1, you could use the
 %   command 'out_struct.performance = this_trial_performance' on trial n-1
 %   and access out_struct.performance on trial n.
 %
