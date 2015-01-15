@@ -11,10 +11,14 @@ global el
 global session 
 
 % Get experiment directory:
-if nargin < 1
+if nargin < 1 || isempty(base_dir)
     session.base_dir = [ uigetdir([], 'Select experiment directory') '/' ];
 else
-    session.base_dir = base_dir;
+    if strcmpi(base_dir(end), '/')
+        session.base_dir = base_dir;
+    else
+        session.base_dir = [base_dir '/'];
+    end
 end
 
 cd(session.base_dir); %
@@ -71,7 +75,11 @@ try
     else
         session.experimenter = 'null';
         session.subject_code = '0';
-        session.condition = 1;
+        if nargin < 2
+            session.condition = 1;
+        else
+            session.condition = condition;
+        end
     end
     
     % Find out which phases will be recording (needed before calling
