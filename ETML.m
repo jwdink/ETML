@@ -1,4 +1,4 @@
-function [my_err] = ETML (base_dir, session_info)
+function [my_err] = ETML (base_dir, condition)
 
 my_err = [];
 
@@ -53,16 +53,19 @@ try
     session.dummy_mode = get_config('DummyMode'); % not tracking eyes
     session.debug_mode = get_config('DebugMode'); % debugging tools (e.g. windowed)
     if ~session.debug_mode
+        session.experimenter = input('Enter your (experimenter) initials: ','s');
+        session.subject_code = input('Enter subject code: ', 's');
         if nargin < 2
-            session.experimenter = input('Enter your (experimenter) initials: ','s');
-            session.subject_code = input('Enter subject code: ', 's');
             session.condition = str2double( input('Enter condition: ', 's') );
         else
-            session.experimenter = session_info{1};
-            session.subject_code = session_info{2};
-            session.condition    = session_info{3};
-            if ischar(session.condition)
-                session.condition = str2double(session.condition);
+            session.condition = condition;
+        end
+        cpif = get_config('CustomPInfo');
+        if ~isempty(cpif)
+            custom_p_info = eval(cpif);
+            for qind = 1:length(custom_p_info) 
+                msg = ['Enter ' custom_p_info{qind} ': '];
+                session.(custom_p_info{qind}) = input(msg,'s');
             end
         end
     else
@@ -80,8 +83,8 @@ try
     
     % Re-Format the Stimuli Config file into a useful table:
     stim_config_p = pad_struct(stim_config);
-    path = ['data/', session.subject_code, '/' 'trial_record.txt'];
-    WriteStructsToText(path, stim_config_p); % for testing
+    trial_record_path = ['data/', session.subject_code, '/' 'trial_record.txt'];
+    WriteStructsToText(trial_record_path, stim_config_p); % for testing
     
     % Begin logging now, because we have the subject_code
     session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'w');
@@ -94,6 +97,11 @@ try
     log_msg(sprintf('Experimenter: %s', session.experimenter));
     log_msg(sprintf('Subject Code: %s', session.subject_code));
     log_msg(sprintf('Condition: %d ', session.condition));
+    if ~session.debug_mode
+        for qind = 1:length(custom_p_info) 
+            log_msg(sprintf( [custom_p_info{qind} ': %s '], session.(custom_p_info{qind}) ));
+        end
+    end
     
     % Initiate data structure for session file
     session.data = struct('key',{},'value',{});
@@ -293,6 +301,14 @@ try
                 
                 % On Each Trial:
                 this_trial_row = get_rows(stim_config_p, session.condition, this_phase, this_block, this_trial);
+                if length(this_trial_row) > 1
+                    log_msg(['Please check: ' trial_record_path]);
+                    stop(['Attempted to find a unique row corresponding to this trial, but there were multiple.'...
+                        ' Check trial_record (see above). Something is probably wrong with stim_config.'])
+                elseif isempty(this_trial_row)
+                    stop(['Attempted to find a unique row corresponding to this trial, but none exists.' ...
+                        'Something is probably wrong with stim_config.']);
+                end
 
                 start_trial(trial_index, stim_config_p(this_trial_row));
                 new_trial_index = show_stimuli(wind, trial_index , stim_config_p(this_trial_row), GL);
@@ -469,82 +485,28 @@ end
         [movie mov_dur fps imgw imgh] = ...
             Screen('OpenMovie', wind, [session.base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
 
-        % Custom Start time [jitter]?:
-        if isfield(trial_config, 'TimeInVidToStart')
-            tiv_config = smart_eval(trial_config.('TimeInVidToStart'));
-            if ~is_default(tiv_config)
-                max_tiv = max(tiv_config);
-                min_tiv = min(tiv_config);
-                tiv_tostart = (max_tiv-min_tiv)*rand() + min_tiv;
-                % since we're coming into the film late, its time-left duration
-                % is shoter than its total duration:
-                mov_dur = mov_dur - tiv_tostart;
-            else
-                tiv_tostart = 0;
-            end
-            add_data('tiv_tostart', tiv_tostart, trial_config.('Phase'));
-        else
-            tiv_tostart = 0;
-        end
+        % Custom Start time?:
+        [tiv_to_start,mov_dur] = set_tiv_to_start(trial_config, mov_dur);
         
-        % Get trial info about stim duration:
-        if isfield(trial_config, 'Duration')
-            dur_config = smart_eval(trial_config.('Duration'));
-            if length(dur_config) > 1
-                if dur_config(2) == 0
-                    duration = mov_dur * 1/mov_rate;
-                else
-                    duration = dur_config(2);
-                end
-                min_duration = dur_config(1);
-            else
-                if is_default(dur_config)
-                    duration = mov_dur * 1/mov_rate;
-                    min_duration = duration;
-                else
-                    duration = dur_config;
-                    min_duration = duration;
-                end
-            end
-        else
-            duration = mov_dur;
-            min_duration = duration;
-        end
-        
-        % Duration jitter:
-        if isfield(trial_config, 'DurJitter')
-            djit_config = smart_eval(trial_config.('DurJitter'));
-            if ~is_default(djit_config)
-                if length(djit_config) == 1
-                    djit_config(2) = 0;
-                end
-                max_djit = max(djit_config);
-                min_djit = min(djit_config);
-
-                dur_jit = (max_djit-min_djit)*rand() + min_djit;
-                duration = duration + dur_jit;
-                min_duration = min_duration + dur_jit;
-            end
-        end  
+        % Duration, duration-jitter:
+        [duration, min_duration] = set_duration(trial_config, mov_dur, mov_rate);
 
         % Save Stim Attributes:
         tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
         draw_tex(wind, tex, trial_index, trial_config, GL, win_rect, 'save_stim_info');
         Screen('FillRect', wind, session.background_color, session.win_rect);
         Screen('Close',tex);
-        Screen('Flip', wind);
-        Screen('Flip', wind);
+        Screen('Flip', wind); Screen('Flip', wind);
         
-        % Start playback(s):
+        % Start playback:
         Screen('PlayMovie', movie , mov_rate);
         WaitSecs(.10);
-        Screen('SetMovieTimeIndex', movie, tiv_tostart);
+        Screen('SetMovieTimeIndex', movie, tiv_to_start);
 
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')), trial_config.('Phase') );
         vid_start = GetSecs();
         
         keycode = check_keypress([], trial_config.('Phase'));
-
         while 1
             keycode = check_keypress(keycode, trial_config.('Phase'));
             
@@ -583,6 +545,67 @@ end
         new_trial_index = trial_index + 1;
         WaitSecs(.1);
 
+        
+        function [tiv_to_start,mov_dur] = set_tiv_to_start(trial_config, mov_dur)
+            if isfield(trial_config, 'TimeInVidToStart')
+                tiv_config = smart_eval(trial_config.('TimeInVidToStart'));
+                if ~is_default(tiv_config)
+                    max_tiv = max(tiv_config);
+                    min_tiv = min(tiv_config);
+                    tiv_to_start = (max_tiv-min_tiv)*rand() + min_tiv;
+                    % since we're coming into the film late, its time-left duration
+                    % is shoter than its total duration:
+                    mov_dur = mov_dur - tiv_to_start;
+                else
+                    tiv_to_start = 0;
+                end
+                add_data('tiv_tostart', tiv_to_start, trial_config.('Phase'));
+            else
+                tiv_to_start = 0;
+            end
+        end
+        
+        function [duration, min_duration] = set_duration(trial_config, mov_dur, mov_rate)
+            if isfield(trial_config, 'Duration')
+                dur_config = smart_eval(trial_config.('Duration'));
+                if length(dur_config) > 1
+                    if dur_config(2) == 0
+                        duration = mov_dur * 1/mov_rate;
+                    else
+                        duration = dur_config(2);
+                    end
+                    min_duration = dur_config(1);
+                else
+                    if is_default(dur_config)
+                        duration = mov_dur * 1/mov_rate;
+                        min_duration = duration;
+                    else
+                        duration = dur_config;
+                        min_duration = duration;
+                    end
+                end
+            else
+                duration = mov_dur;
+                min_duration = duration;
+            end
+            
+            % Duration jitter:
+            if isfield(trial_config, 'DurJitter')
+                djit_config = smart_eval(trial_config.('DurJitter'));
+                if ~is_default(djit_config)
+                    if length(djit_config) == 1
+                        djit_config(2) = 0;
+                    end
+                    max_djit = max(djit_config);
+                    min_djit = min(djit_config);
+                    
+                    dur_jit = (max_djit-min_djit)*rand() + min_djit;
+                    duration = duration + dur_jit;
+                    min_duration = min_duration + dur_jit;
+                end
+            end
+        end
+        
     end
 
 %% FXN_show_img
@@ -890,21 +913,21 @@ end
         
         paths={};
         
-        for i=1:length(dirinfo)
+        for f_ind=1:length(dirinfo)
             
-            if dirinfo(i).isdir==1
+            if dirinfo(f_ind).isdir==1
                 if hierarchical==1
-                    addMe=comb_dir([directory '/' dirinfo(i).name],1);
+                    addMe=comb_dir([directory '/' dirinfo(f_ind).name],1);
                     if ~isempty(addMe) % if the folder was empty, stop. otherwise, add it to the list
                         %if ~iscell(addMe{1}); addMe={addMe};end;
                         paths{end+1} = addMe; %#ok<AGROW>
                     end
                 else
-                    paths=[paths comb_dir([directory '/' dirinfo(i).name])]; %#ok<AGROW>
+                    paths=[paths comb_dir([directory '/' dirinfo(f_ind).name])]; %#ok<AGROW>
                 end
             else
-                if ~strcmpi(dirinfo(i).name,'.DS_Store')
-                    pathToFile= [directory '/' dirinfo(i).name];
+                if ~strcmpi(dirinfo(f_ind).name,'.DS_Store')
+                    pathToFile= [directory '/' dirinfo(f_ind).name];
                     paths=[paths pathToFile]; %#ok<AGROW>
                 end
             end
@@ -929,7 +952,7 @@ end
             stim_paths = cell(col_len, 1); % pre-allocate
             
             % For each column entry...
-            for i = 1:col_len
+            for row = 1:col_len
                 
                  if strcmpi(col_name, 'trial')
                     % For the 'trial' column, they don't have to specify
@@ -937,16 +960,16 @@ end
                     % stimuli path:
                     
                     % Get stim information:
-                    stim_path = config_struct(i).('Stimuli');
-                    if      isempty( strfind( config_struct(i).('Stimuli') , '.' ) ) ...
-                        &&  isempty( strfind( config_struct(i).('StimType'), 'custom') )
+                    stim_path = config_struct(row).('Stimuli');
+                    if      isempty( strfind( config_struct(row).('Stimuli') , '.' ) ) ...
+                        &&  isempty( strfind( config_struct(row).('StimType'), 'custom') )
                         % is directory
-                        stim_paths{i} = comb_dir(stim_path, 1);
-                        stim_paths{i} = stim_paths{i}(cellfun(@(x) ~iscell(x), stim_paths{i})); %no subdirs
+                        stim_paths{row} = comb_dir(stim_path, 1);
+                        stim_paths{row} = stim_paths{row}(cellfun(@(x) ~iscell(x), stim_paths{row})); %no subdirs
                     else
                         % is specific file
-                        stim_paths{i} = {stim_path};
-                        if strcmpi(column{i}, 'auto')
+                        stim_paths{row} = {stim_path};
+                        if strcmpi(column{row}, 'auto')
                             error(['The "auto" setting may only be applied to entire blocks, whose' ...
                                 ' "stimuli" field points to a folder.']);
                         end
@@ -954,14 +977,14 @@ end
                     
                     % Check if they specified 'auto'. if so, assign a trial
                     % length based on numstim:
-                    if strcmpi(column{i}, 'auto')
-                        num_trials = length( stim_paths{i} ); % num stim
-                        column{i} = ['1:' num2str(num_trials)];
+                    if strcmpi(column{row}, 'auto')
+                        num_trials = length( stim_paths{row} ); % num stim
+                        column{row} = ['1:' num2str(num_trials)];
                     end
                 end
                 
                 % check the entered value (e.g., '1:36'), expand it into a full vector:
-                elem = column{i};
+                elem = column{row};
                 elem_expr = strrep(elem,'"',''); % remove quotes
                 expanded_elem = eval( elem_expr );
                 
@@ -970,9 +993,9 @@ end
                     % specific stimuli, but instead can specify a folder.
                     
                     num_trials = length(expanded_elem);
-                    num_stim   = length(stim_paths{i});
+                    num_stim   = length(stim_paths{row});
                     
-                    if ~is_default( config_struct(i).('RandStimSelection') ) && strcmpi( config_struct(i).('RandStimSelection') , 'replace' )
+                    if ~is_default( config_struct(row).('RandStimSelection') ) && strcmpi( config_struct(row).('RandStimSelection') , 'replace' )
                         % random, without replacement
                         ind = datasample(1:num_stim, num_trials);
                     else
@@ -982,10 +1005,10 @@ end
                             multipl = floor( num_trials / num_stim );
                             ind = repmat( 1:num_stim, 1, multipl);
                             diff = num_trials - length(ind);
-                            if ~is_default( config_struct(i).('RandStimSelection') )
+                            if ~is_default( config_struct(row).('RandStimSelection') )
                                 leftover = randsample(num_stim, diff);
                                 ind = [ind leftover]; %#ok<AGROW>
-                                ind = ind(randperm(length(ind))) % shuffle
+                                ind = ind(randperm(length(ind))); % shuffle
                             else
                                 leftover = 1:diff;
                                 ind = [ind leftover]; %#ok<AGROW>
@@ -994,7 +1017,7 @@ end
                         else
                             % If this folder's numstim >= numtrials, select subset:
                             % (if it's not a folder, this code does nothing)
-                            if ~is_default( config_struct(i).('RandStimSelection') )
+                            if ~is_default( config_struct(row).('RandStimSelection') )
                                 % randomly select num_trials # of stimuli from
                                 % the folder with replacement
                                 ind = randsample(num_stim, num_trials);
@@ -1004,7 +1027,7 @@ end
                             end
                         end
                     end
-                    stim_paths{i} = stim_paths{i}(ind); % select the subset/superset
+                    stim_paths{row} = stim_paths{row}(ind); % select the subset/superset
                 end
                 
                 % For the expanded values, make new rows, append them to
@@ -1016,7 +1039,7 @@ end
                         len = 0;
                     end
                     
-                    new_struct(len+1) = config_struct(i);  %#ok<AGROW>
+                    new_struct(len+1) = config_struct(row);  %#ok<AGROW>
                     % insert row into new structure
                     new_struct(len+1).(col_name) = expanded_elem(t); %#ok<AGROW>
                     % place the proper value in that row (e.g., replace
@@ -1025,7 +1048,7 @@ end
                     if strcmpi(col_name, 'trial')
                         % Place the proper value for 'stimuli' (e.g.,
                         % specific filepath replaces folder path)
-                        new_struct(len+1).('Stimuli') = stim_paths{i}{t}; %#ok<AGROW>
+                        new_struct(len+1).('Stimuli') = stim_paths{row}{t}; %#ok<AGROW>
                     end
                 end   % each row in new table
                 
