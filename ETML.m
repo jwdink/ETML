@@ -149,8 +149,7 @@ try
     end
     
     % Create window
-    session.background_color = get_config('BackgroundColor');
-    session.background_color = repmat(session.background_color, 1, 3);
+    session.background_color = repmat(get_config('BackgroundColor'), 1, 3);
     resolution = eval(get_config('ScreenRes'));
     if session.debug_mode
         refresh_rate = [];
@@ -224,7 +223,6 @@ try
     end
     
     % Send some commands to eyetracker to set up event parsing:
-    % (no idea what this does)
     Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
     Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
     
@@ -414,24 +412,20 @@ end
         % End trial
         if session.record_phases(trial_config.('Phase'));
             % ET was recording:
-            phase = trial_config.('Phase');
             log_msg(...
                 ['STOP_RECORDING_PHASE_',  num2str(trial_config.('Phase')),...
                 '_BLOCK_',                 num2str(trial_config.('Block')),...
                 '_TRIAL_',                 num2str(trial_index)], ...
-                phase );
-        else
-            % ET was not recording:
-            phase = [];
-        end
-        
-        if ~isempty(phase)
-            % We were recording:
+                trial_config.('Phase') );
             log_msg('StopRecording');
             Eyelink('StopRecording');
             WaitSecs(.01);
             Screen('Close');
             Eyelink('Message', 'TRIAL_RESULT 0');
+        else
+            % ET was not recording:
+            WaitSecs(.01);
+            Screen('Close');
         end
         
     end
