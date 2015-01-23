@@ -65,7 +65,9 @@ try
             session.condition = condition;
         end
         cpif = get_config('CustomPInfo');
-        if ~isempty(cpif)
+        if isempty(cpif)
+            custom_p_info = [];
+        else
             custom_p_info = eval(cpif);
             for qind = 1:length(custom_p_info) 
                 msg = ['Enter ' custom_p_info{qind} ': '];
@@ -135,7 +137,7 @@ try
     GL = struct(); 
     InitializeMatlabOpenGL([],[],1); 
     
-    if session.dummy_mode
+    if session.debug_mode
         % skip sync tests for faster load
         Screen('Preference','SkipSyncTests', 1);
         log_msg('Running in DebugMode');
@@ -150,7 +152,7 @@ try
     session.background_color = get_config('BackgroundColor');
     session.background_color = repmat(session.background_color, 1, 3);
     resolution = eval(get_config('ScreenRes'));
-    if session.dummy_mode
+    if session.debug_mode
         refresh_rate = [];
     else
         refresh_rate = get_config('RefreshRate');
