@@ -122,7 +122,11 @@ classdef ptbob
                     if obj_struct.fill
                         Screen('FillOval', wind, obj_struct.rgb, obj_struct.dest_rect);
                     else
-                        pen_wid = obj_struct.dim(1) / 10;
+                        if isempty( obj_struct.sp )
+                            pen_wid = obj_struct.dim(1) / 10;
+                        else 
+                            pen_wid = obj_struct.sp{1};
+                        end
                         Screen('FrameOval', wind, obj_struct.rgb, obj_struct.dest_rect, pen_wid);
                     end
                 end
