@@ -16,7 +16,7 @@ end
 if isnumeric(data_value)
     data_value = num2str(data_value);
 end
-log_msg(sprintf('%s : %s',data_key, num2str(data_value) ));
+log_msg(sprintf('%s : %s',data_key, data_value ));
 if session.record_phases(this_phase)
     WaitSecs(.002);
     Eyelink('Message','!V TRIAL_VAR %s %s', data_key, data_value);
