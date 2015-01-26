@@ -317,11 +317,19 @@ try
                     stop(['Attempted to find a unique row corresponding to this trial, but none exists.' ...
                         'Something is probably wrong with stim_config.']);
                 end
-
-                start_trial(trial_index, stim_config_p(this_trial_row));
-                new_trial_index = show_stimuli(wind, trial_index , stim_config_p(this_trial_row), GL);
-                stop_trial(trial_index, stim_config_p(this_trial_row));
                 
+                %%% Run Trial:
+                start_trial(trial_index, stim_config_p(this_trial_row));
+                
+                if ~exist('out_struct', 'var')
+                    out_struct = struct();
+                end
+                
+                [new_trial_index, out_struct] =...
+                    show_stimuli(wind, trial_index , stim_config_p(this_trial_row), out_struct, GL);
+                
+                stop_trial(trial_index, stim_config_p(this_trial_row));
+                %%%
             end
         end
     end
@@ -341,7 +349,7 @@ catch my_err
 end
 
 %% FXN_show_stimuli
-    function [new_trial_index] = show_stimuli (wind, trial_index, trial_config, GL)
+    function [new_trial_index, out_struct] = show_stimuli (wind, trial_index, trial_config, out_struct, GL)
         
         add_data('stim_type', trial_config.('StimType') );
         
@@ -358,12 +366,8 @@ end
             
         elseif ~isempty( strfind(trial_config.('StimType'), 'custom') )
             
-            if ~exist('out_struct', 'var')
-                out_struct = struct(); 
-            end
             [new_trial_index, out_struct] =...
-                custom_function(wind, trial_index, trial_config, out_struct); %#ok<NASGU>
-             
+                custom_function(wind, trial_index, trial_config, out_struct); 
         else
             errmsg = ['StimType "' trial_config.('StimType') '" is unsupported.'];
             error(errmsg);
