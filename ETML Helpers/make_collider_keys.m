@@ -30,21 +30,25 @@ for i = 1:num_loops
     ob2_mid_pos_x = col_pos_x + (dim/2 * (1-prop_overlap));
     ob2_stop_pos_x = ob2_mid_pos_x + vel * stroke_dur;
     
+    colnames = {'time', 'x', 'y', 'role', 'loopnum'}; %#ok<NASGU>
+    
     keyframes1 = vertcat(keyframes1, ...
-        [lte                 ob1_start_pos_x  dff NaN  i; ... % loop start
+        [lte                 ob1_start_pos_x  dff 0    i; ... % loop start
         lte + ob1_start1     ob1_start_pos_x  dff 1    i; ... % object1 moves to collide
         lte + ob1_stop1      ob1_mid_pos_x    dff 1    i; ... % object1 collides, stops
-        lte + ob1_start2     ob1_mid_pos_x    dff 0    i; ... % object1 gets hit, moves
-        lte + ob1_stop2      ob1_start_pos_x  dff 0    i; ... % object1 stops at border
-        lte + end_trial      ob1_start_pos_x  dff NaN  i; ... % loop end
+        lte + ob2_stop1      ob1_mid_pos_x    dff 0    i; ... % object2 lands, ob1 no longer the "cause"
+        lte + ob2_start2     ob1_mid_pos_x    dff 2    i; ... % object2 moves to collide
+        lte + ob1_start2     ob1_mid_pos_x    dff 2    i; ... % object1 gets hit, moves
+        lte + ob1_stop2      ob1_start_pos_x  dff 0    i; ... % object1 stops at border/ loop end
         ]); %#ok<AGROW>
     keyframes2 = vertcat(keyframes2, ...
-        [lte                 ob2_mid_pos_x    dff NaN  i; ... % loop start
-        lte + ob2_start1     ob2_mid_pos_x    dff 0    i; ... % object2 gets hit, moves
+        [lte                 ob2_mid_pos_x    dff 0    i; ... % loop start
+        lte + ob1_start1     ob2_mid_pos_x    dff 2    i; ... % object1 moves to collide
+        lte + ob2_start1     ob2_mid_pos_x    dff 2    i; ... % object2 gets hit, moves
         lte + ob2_stop1      ob2_stop_pos_x   dff 0    i; ... % object2 stops at border
         lte + ob2_start2     ob2_stop_pos_x   dff 1    i; ... % object2 moves to collide
         lte + ob2_stop2      ob2_mid_pos_x    dff 1    i; ... % object2 collides, stops
-        lte + end_trial      ob2_mid_pos_x    dff NaN  i; ... % loop end
+        lte + end_trial      ob2_mid_pos_x    dff 0    i; ... % loop end
         ]); %#ok<AGROW>
     lte = lte + end_trial; % this (about to be last) trial end time
     
