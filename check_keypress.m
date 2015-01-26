@@ -26,15 +26,17 @@ released_keys = find(keycode_diff < 0);
 pressed_keys  = find(keycode_diff > 0);
 
 for i = 1:length(released_keys)
-    log_msg(sprintf( 'Key released: %s', KbName(released_keys(i)) ), this_phase)
+    released_key_name = KbName(released_keys(i));
+    log_msg(sprintf( 'Key released: %s', released_key_name ), this_phase)
 end
 for i = 1:length(pressed_keys)
-    log_msg(sprintf( 'Key pressed: %s',  KbName(pressed_keys(i))  ), this_phase)
+    pressed_key_name = KbName(pressed_keys(i));
+    log_msg(sprintf( 'Key pressed: %s', pressed_key_name ), this_phase)
 end
 
 % check for escape:
 if length(pressed_keys) == 1
-    if strcmpi( KbName(pressed_keys) , 'Escape' )
+    if strcmpi( pressed_key_name , 'Escape' )
         WaitSecs(.5);
         [~,~,keycode] = KbCheck();
         if strcmpi(KbName(keycode),'Escape')
