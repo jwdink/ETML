@@ -35,58 +35,56 @@ try
     end
     Eyelink('ShutDown');
 catch  %#ok<CTCH>
-    if aborted
-        disp('Experiment aborted - results file not saved, but there is a log.');
-        error('Experiment Ended.');
-    else
-        disp(['There seems to have been a problem shutting down the eyelink '...
-              'system-- session txt file has not been generated.']);
-        error('Experiment Ended.');
-    end
+    disp(['There seems to have been a problem shutting down the eyelink '...
+        'system-- session txt file has not been generated.']);
+    error('Experiment Ended.');
 end
 
 
 % Save session data:
-if ~aborted
+if ~session.debug_mode
     % get experimenter comments
     comments = inputdlg('Enter your comments about attentiveness, etc.:','Comments',3);
     if isempty(comments)
         comments = {''};
     end
-    
-    % create empty structure for results
-    results = struct('key',{},'value',{});
-    
-    [ year, month, day, hour, minute, sec ] = datevec(now);
-    end_time = ...
-        [num2str(year) '-' num2str(month) '-' num2str(day) ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
-    
-    results(length(results) + 1).key = 'Start Time';
-    results(length(results)).value = session.start_time;
-    results(length(results) + 1).key = 'End Time';
-    results(length(results)).value = end_time;
-    results(length(results) + 1).key = 'Experimenter';
-    results(length(results)).value = session.experimenter;
-    results(length(results) + 1).key = 'Subject Code';
-    results(length(results)).value = session.subject_code;
-    results(length(results) + 1).key = 'Condition';
-    results(length(results)).value = session.condition;
-    results(length(results) + 1).key = 'Comments';
-    results(length(results)).value = comments{1};
-    
-    % merge in data
-    for i = 1:length(session.data)
-        results(length(results) + 1).key = session.data(i).key;
-        results(length(results)).value = session.data(i).value;
-    end
-    
-    % save session file
-    filename = [session.base_dir '/sessions/' session.subject_code '.txt'];
-    log_msg(sprintf('Saving results file to %s',filename));
-    WriteStructsToText(filename,results)
 else
-    disp('Experiment aborted - results file not saved, but there is a log.');
-    error('Experiment Ended.');
+    comments = {''};
+end
+
+% create empty structure for results
+results = struct('key',{},'value',{});
+
+[ year, month, day, hour, minute, sec ] = datevec(now);
+end_time = ...
+    [num2str(year) '-' num2str(month) '-' num2str(day) ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
+
+results(length(results) + 1).key = 'Start Time';
+results(length(results)).value = session.start_time;
+results(length(results) + 1).key = 'End Time';
+results(length(results)).value = end_time;
+results(length(results) + 1).key = 'Experimenter';
+results(length(results)).value = session.experimenter;
+results(length(results) + 1).key = 'Subject Code';
+results(length(results)).value = session.subject_code;
+results(length(results) + 1).key = 'Condition';
+results(length(results)).value = session.condition;
+results(length(results) + 1).key = 'Comments';
+results(length(results)).value = comments{1};
+
+% merge in data
+for i = 1:length(session.data)
+    results(length(results) + 1).key = session.data(i).key;
+    results(length(results)).value = session.data(i).value;
+end
+
+% save session file
+filename = [session.base_dir '/sessions/' session.subject_code '.txt'];
+log_msg(sprintf('Saving results file to %s',filename));
+WriteStructsToText(filename,results)
+
+if aborted
+    error('Experiment Ended.')
 end
 
 end
