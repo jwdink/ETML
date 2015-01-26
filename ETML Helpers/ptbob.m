@@ -61,6 +61,25 @@ classdef ptbob
         %% Modify Object:
         % function [obj_struct] = some_modifcation(obj_struct, modifcation_params, ...)
         
+        %% Check if object is moving:
+        function [moving] = is_moving(obj_struct, time)
+            
+            % Find the closest keyframe before current time:
+            if time == 0; time = 10^-50; end; % if time = 0 exactly error would be thrown, this prevents
+            last_kf = max(obj_struct.kf(:,1));
+            if time > last_kf; time = last_kf - 10^-50; end; % if time>=last_kf, keep at last_kf
+            
+            kf1 = find(obj_struct.kf(:,1) - time < 0, 1, 'last');
+            kf2 = kf1+1;
+            
+            same_x = obj_struct.kf(kf1,2) == obj_struct.kf(kf2,2);
+            same_y = obj_struct.kf(kf1,3) == obj_struct.kf(kf2,3);
+            
+            moving = same_x && same_y;
+            
+        end
+
+        
         %% Draw Object:
         function draw_object(obj_struct, wind, time, cm)
             % this function generates a psychtoolbox drawing/oval/texture/whatever
