@@ -1,5 +1,8 @@
 %% FXN_get_config
 function [value] = get_config (name)
+
+global session
+
 matching_param = find(cellfun(@(x) strcmpi(x, name), {session.config.Parameter}));
 value = [session.config(matching_param).Setting]; %#ok<FNDSB>
 
