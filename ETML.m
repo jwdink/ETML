@@ -364,6 +364,11 @@ end
             new_trial_index = ...
                 show_vid(wind, trial_index, trial_config, GL);
             
+        elseif ~isempty( strfind(trial_config.('StimType'), 'text') )
+            
+            new_trial_index = ... 
+                show_text(wind, trial_index, trial_config);
+            
         elseif ~isempty( strfind(trial_config.('StimType'), 'custom') )
             
             [new_trial_index, out_struct] =...
@@ -482,7 +487,88 @@ end
         return
         
     end
-
+%% FXN_show_text
+    function [new_trial_index] = show_text(wind, trial_index, trial_config)
+        
+        while KbCheck; end;
+        
+        % What text to display?
+        the_text = trial_config.('Stimuli');
+        
+        % How long?
+        [duration, min_duration] = set_duration(trial_config);
+        
+        % Get Pos config:
+        if isfield(trial_config, 'StimCenterX') && ~is_default(trial_config.StimCenterX)
+            center_x = trial_config.StimCenterX;
+        else
+            center_x = session.win_rect(3) / 2;
+        end
+        if isfield(trial_config, 'StimCenterY') && ~is_default(trial_config.StimCenterY)
+            center_y = trial_config.StimCenterY;
+        else
+            center_y = session.win_rect(4) / 2;
+        end
+        
+        % Offset from center not from upper right:
+        [bbox] = Screen('TextBounds', wind, the_text);
+        twid = bbox(3) - bbox(1);
+        center_x = center_x - twid/2;
+        theight = bbox(4) - bbox(2);
+        center_y = center_y - theight/2;
+        
+        % Draw:
+        DrawFormattedText(wind, the_text, center_x, center_y);
+        Screen('Flip', wind);
+        text_start = GetSecs();
+        
+        % Wait For KeyPress:
+        keycode = check_keypress([], trial_config.('Phase'));
+        while 1
+            keycode = check_keypress(keycode, trial_config.('Phase'));
+            
+            if GetSecs() - text_start >= duration
+                break % end movie
+            end
+            
+            if sum(keycode)
+                if GetSecs() - text_start >= min_duration
+                  break % end movie
+                end
+            end
+        end
+        
+        new_trial_index = trial_index + 1;
+        return
+        
+        %
+        function [duration, min_duration] = set_duration(trial_config)
+            if isfield(trial_config, 'Duration')
+                dur_config = smart_eval(trial_config.('Duration'));
+                if length(dur_config) > 1
+                    if dur_config(2) == 0
+                        duration = Inf;
+                    else
+                        duration = dur_config(2);
+                    end
+                    min_duration = dur_config(1);
+                else
+                    if is_default(dur_config)
+                        duration = Inf;
+                        min_duration = 0;
+                    else
+                        duration = dur_config;
+                        min_duration = duration;
+                    end
+                end
+            else
+                duration = Inf;
+                min_duration = 0;
+            end
+            
+        end
+        
+    end
 %% FXN_show_vid
     function [new_trial_index] = show_vid(wind, trial_index, trial_config, GL)
         
