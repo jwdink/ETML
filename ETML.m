@@ -1,4 +1,4 @@
-function [my_err] = ETML (base_dir, condition)
+function [my_err] = ETML (base_dir, condition, extra_opts)
 
 my_err = [];
 
@@ -20,8 +20,13 @@ else
         session.base_dir = [base_dir '/'];
     end
 end
+if nargin < 3
+    extra_opts = {0 0};
+end
+skip_phase_one = extra_opts{1};
+force_debug = extra_opts{2};
 
-cd(session.base_dir); %
+cd(session.base_dir); % change directory
 
 % Load the tab-delimited configuration files:
 session.config = ReadStructsFromTextW('config.txt');
@@ -53,10 +58,26 @@ try
         [num2str(year) '-' num2str(month) '-' num2str(day) ...
         ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
     
-    % Get subject code
+    % Dummy mode (mouse=eyes):
     session.dummy_mode = get_config('DummyMode'); % not tracking eyes
-    session.debug_mode = get_config('DebugMode'); % debugging tools (e.g. windowed)
-    if ~session.debug_mode
+    
+    % Debugging tools (e.g. windowed):
+    if force_debug
+        session.debug_mode = 1;
+    else
+        session.debug_mode = get_config('DebugMode'); 
+    end
+    
+    if session.debug_mode
+        session.experimenter = 'null';
+        session.subject_code = '0';
+        if nargin < 2
+            session.condition = 1;
+        else
+            session.condition = condition;
+        end
+        
+    else
         session.experimenter = input('Enter your (experimenter) initials: ','s');
         session.subject_code = input('Enter subject code: ', 's');
         if nargin < 2
@@ -74,14 +95,6 @@ try
                 session.(custom_p_info{qind}) = input(msg,'s');
             end
         end
-    else
-        session.experimenter = 'null';
-        session.subject_code = '0';
-        if nargin < 2
-            session.condition = 1;
-        else
-            session.condition = condition;
-        end
     end
     
     % Find out which phases will be recording (needed before calling
@@ -96,7 +109,7 @@ try
     trial_record_path = ['data/', session.subject_code, '/' 'trial_record.txt'];
     WriteStructsToText(trial_record_path, stim_config_p); % for testing
     
-    % Begin logging now, because we have the subject_code
+    % Begin logging now
     session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'w');
     fclose(session.fileID);
     log_msg(sprintf('Set base dir: %s', session.base_dir));
@@ -115,6 +128,7 @@ try
     
     % Initiate data structure for session file
     session.data = struct('key',{},'value',{});
+    session.skip_comments = get_config('SkipComments');
     
     % Key controls
     session.next_key = 'RightArrow';
@@ -250,6 +264,9 @@ try
     this_phase = 0;
     while this_phase < length(phases)
         this_phase = this_phase + 1;
+        if skip_phase_one && this_phase == 1
+            this_phase = 2;
+        end
         
         % On Each Phase:
         this_phase_rows = get_rows(stim_config_p, session.condition, this_phase);

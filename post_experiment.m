@@ -42,7 +42,7 @@ end
 
 
 % Save session data:
-if ~session.debug_mode
+if ~(session.skip_comments || session.debug_mode)
     % get experimenter comments
     comments = inputdlg('Enter your comments about attentiveness, etc.:','Comments',3);
     if isempty(comments)
