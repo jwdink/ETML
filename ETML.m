@@ -129,6 +129,7 @@ try
     % Initiate data structure for session file
     session.data = struct('key',{},'value',{});
     session.skip_comments = get_config('SkipComments');
+    if isempty(session.skip_comments); session.skip_comments = 0; end;
     
     % Key controls
     session.next_key = 'RightArrow';
