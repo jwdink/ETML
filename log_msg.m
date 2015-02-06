@@ -9,6 +9,11 @@ if nargin < 2
     this_phase = [];
 end
 
+% remove any quotes in value that will screw up log file:
+% (think about removing this if speed is big priority)
+msg = strrep(msg, char(39), '');
+msg = strrep(msg, char(34), '');
+
 session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'a');
 
 [ year, month, day, hour, minute, sec ] = datevec(now);

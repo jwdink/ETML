@@ -75,7 +75,13 @@ results(length(results)).value = comments{1};
 % merge in data
 for i = 1:length(session.data)
     results(length(results) + 1).key = session.data(i).key;
-    results(length(results)).value = session.data(i).value;
+    
+    % remove any quotes in value that will screw up log file:
+    val = session.data(i).value;
+    val = strrep(val, char(39), '');
+    val = strrep(val, char(34), '');
+    
+    results(length(results)).value = val;
 end
 
 % save session file
