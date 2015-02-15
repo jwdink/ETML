@@ -78,8 +78,10 @@ for i = 1:length(session.data)
     
     % remove any quotes in value that will screw up log file:
     val = session.data(i).value;
-    val = strrep(val, char(39), '');
-    val = strrep(val, char(34), '');
+    if ischar(val)
+        val = strrep(val, char(39), '');
+        val = strrep(val, char(34), '');
+    end
     
     results(length(results)).value = val;
 end

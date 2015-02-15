@@ -2,7 +2,13 @@
 function log_msg (msg, this_phase)
 global session
 
-fprintf('\n# %s\n',msg);
+if ~ischar(msg)
+    warning('MATLAB:narginchk','You''ve passed a non-char argument to log_msg.');
+    msg= num2str(msg);
+end
+
+fprintf('\n# %s\n', msg);
+
 if nargin < 2
     % if this_phase is not given, then message will not be sent to
     % eyetracker
@@ -13,6 +19,7 @@ end
 % (think about removing this if speed is big priority)
 msg = strrep(msg, char(39), '');
 msg = strrep(msg, char(34), '');
+
 
 session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'a');
 
