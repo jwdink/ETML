@@ -15,7 +15,7 @@ Screen('Preference', 'SuppressAllWarnings', 0);
 
 commandwindow;
 
-% Close EL (I'm not proud of this code):
+% Close EL:
 try
     if aborted
         Eyelink('StopRecording');
