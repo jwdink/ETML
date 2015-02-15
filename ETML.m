@@ -369,8 +369,6 @@ end
 %% FXN_show_stimuli
     function [new_trial_index, out_struct] = show_stimuli (wind, trial_index, trial_config, out_struct, GL)
         
-        add_data('stim_type', trial_config.('StimType') );
-        
         if     ~isempty( strfind(trial_config.('StimType'), 'img') ) || ...
                ~isempty( strfind(trial_config.('StimType'), 'slideshow') )
 
