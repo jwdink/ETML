@@ -24,9 +24,9 @@ for i = 1:num_loops
     end_trial  = ob1_stop2;
     
     % Positions:
-    ob1_mid_pos_x = col_pos_x - (dim/2 * (1-prop_overlap));  % where is object1 when it collides?
+    ob1_mid_pos_x = col_pos_x - (dim/2 * (1-prop_overlap-.03));  % where is object1 when it collides?
     ob1_start_pos_x = ob1_mid_pos_x - vel * stroke_dur;    % where is object1 initially?
-    ob2_mid_pos_x = col_pos_x + (dim/2 * (1-prop_overlap));
+    ob2_mid_pos_x = col_pos_x + (dim/2 * (1-prop_overlap-.03));
     ob2_stop_pos_x = ob2_mid_pos_x + vel * stroke_dur;
     
     colnames = {'time', 'x', 'y', 'role', 'loopnum'}; %#ok<NASGU>
