@@ -50,7 +50,7 @@ try
     [ year, month, day, hour, minute, sec ] = datevec(now);
     session.start_time =...
         [num2str(year) '-' num2str(month) '-' num2str(day) ...
-        ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
+        ' ' num2str(hour) '-' num2str(minute) '-' num2str(sec) ];
     
     % Dummy mode (mouse=eyes):
     session.dummy_mode = get_config('DummyMode'); % not tracking eyes
