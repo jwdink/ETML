@@ -31,12 +31,6 @@ cd(session.base_dir); % change directory
 % Load the tab-delimited configuration files:
 session.config = ReadStructsFromTextW('config.txt');
 stim_config = ReadStructsFromTextW('stim_config.txt');
-if exist( 'interest_areas.txt', 'file')
-    IA_config = ReadStructsFromTextW('interest_areas.txt');
-end
-
-% Re-Format the Interest Area Config file into a useful table:
-% * TO DO *
 
 % Create Necessary Folders:
 if ~exist('logs','dir'); mkdir('logs'); end;
@@ -359,6 +353,15 @@ catch my_err
         
     log_msg(my_err.message);
     log_msg(num2str([my_err.stack.line]));
+    
+    sca;
+    
+    h= msgbox({'Experiment has encountered an error and shut down.'...
+        ['MSG: ' my_err.message] ['LINE:' num2str([my_err.stack.line])] ...
+        'Press OK to save results so far, and save err msg to log.' ...
+        'You should let the experiment owner know about this error.'}, ...
+    'Error', 'error');
+    uiwait(h)
     
     if ~strcmpi(my_err.message,'Experiment ended.')
         post_experiment(true);
@@ -1059,25 +1062,36 @@ end
                     % stimuli path:
                     
                     % Get stim information:
-                    stim_path = config_struct(row).('Stimuli');
-                    if      isempty( strfind( config_struct(row).('Stimuli') , '.' ) ) ...
-                        &&  isempty( strfind( config_struct(row).('StimType'), 'custom') )
-                        % is directory
-                        stim_paths{row} = comb_dir(stim_path, 1);
-                        stim_paths{row} = stim_paths{row}(cellfun(@(x) ~iscell(x), stim_paths{row})); %no subdirs
-                    else
-                        % is specific file
-                        stim_paths{row} = {stim_path};
-                        if strcmpi(column{row}, 'auto')
-                            error(['The "auto" setting may only be applied to entire blocks, whose' ...
-                                ' "stimuli" field points to a folder.']);
+                    stim = config_struct(row).('Stimuli');
+                                        
+                    if ~isempty( cell2mat( strfind( {'image', 'slideshow', 'video'}, config_struct(row).('StimType') ) ) )
+                        % need to get stim from a file/directory
+                        stim_path = stim;
+                        
+                        if isempty( strfind( '.' , stim_path ) )
+                            % is directory
+                            stim_paths{row} = comb_dir(stim_path, 1);
+                            stim_paths{row} = stim_paths{row}(cellfun(@(x) ~iscell(x), stim_paths{row})); %no subdirs
+                        else
+                            % is specific file
+                            stim_paths{row} = {stim_path};
+                            if strcmpi(column{row}, 'auto')
+                                error(['The "auto" setting may only be applied to entire blocks, whose' ...
+                                    ' "stimuli" field points to a folder.']);
+                            end
                         end
+                    else 
+                        % stim specifies something else aside from path, ignore it.
+                        stim_paths{row} = {stim};
                     end
-                    
+                        
                     % Check if they specified 'auto'. if so, assign a trial
                     % length based on numstim:
                     if strcmpi(column{row}, 'auto')
                         num_trials = length( stim_paths{row} ); % num stim
+                        if num_trials < 1
+                            error('COULD NOT FIND ANY STIM IN IN STIM FOLDER')
+                        end
                         column{row} = ['1:' num2str(num_trials)];
                     end
                 end
