@@ -1,6 +1,6 @@
-function [my_err] = ETML (base_dir, condition, extra_opts)
+function [exp_err] = ETML (base_dir, condition, extra_opts)
 
-my_err = [];
+exp_err = [];
 
 %% LOAD CONFIGURATION %%
 
@@ -50,7 +50,7 @@ try
     [ year, month, day, hour, minute, sec ] = datevec(now);
     session.start_time =...
         [num2str(year) '-' num2str(month) '-' num2str(day) ...
-        ' ' num2str(hour) '-' num2str(minute) '-' num2str(sec) ];
+        ' ' num2str(hour) '-' num2str(minute) '-' num2str(round(sec)) ];
     
     % Dummy mode (mouse=eyes):
     session.dummy_mode = get_config('DummyMode'); % not tracking eyes
@@ -104,6 +104,8 @@ try
     WriteStructsToText(trial_record_path, stim_config_p); % for testing
     
     % Begin logging now
+    mkdir('logs')
+    mkdir('sessions')
     session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'w');
     fclose(session.fileID);
     log_msg(sprintf('Set base dir: %s', session.base_dir));
@@ -130,7 +132,7 @@ try
     session.prev_key = 'LeftArrow';
     
     % Wait for experimenter to press Enter to begin
-    disp(upper(sprintf('\n\nPress any key to launch the experiment window\n\n')));
+    disp(upper(sprintf('\n\n********Press any key to launch the experiment window********\n\n')));
     if ~session.debug_mode
         KbWait([], 2);
     end
@@ -154,6 +156,10 @@ try
         log_msg('Not running in DebugMode');
         % disable the keyboard
         ListenChar(2);
+    end
+    
+    hc = get_config('HideCursor', 1);
+    if hc
         HideCursor();
     end
     
@@ -195,55 +201,61 @@ try
     log_msg(sprintf('Screen resolution is %s by %s',num2str(session.swidth),num2str(session.sheight)));
     
     %% SET UP EYETRACKER
-    
-    % Provide Eyelink with details about the graphics environment
-    % and perform some initializations. The information is returned
-    % in a structure that also contains useful defaults
-    % and control codes (e.g. tracker state bit and Eyelink key values).
-    el = EyelinkInitDefaults(wind);
-    el.backgroundcolour = session.background_color; % might as well make things consistent
-    
-    priorityLevel = MaxPriority(wind);
-    Priority(priorityLevel);
-    
-    % Initialization of the connection with the Eyelink Gazetracker.
-    % exit program if this fails.
-    % This is where the eyetracker is set to dummy-mode, if that option was
-    % selected
-    DrawFormattedText(wind, ['If you''re seeing this for a while, ET might'...
-        ' not be connected. Press anykey to quit.'], 'center', 'center');
-    Screen('Flip', wind);
-    
-    if ~EyelinkInit(get_config('DummyMode'), 1)
-        log_msg(sprintf('Eyelink Init aborted.\n'));
-        post_experiment(true);
+    try
+        % Provide Eyelink with details about the graphics environment
+        % and perform some initializations. The information is returned
+        % in a structure that also contains useful defaults
+        % and control codes (e.g. tracker state bit and Eyelink key values).
+        el = EyelinkInitDefaults(wind);
+        el.backgroundcolour = session.background_color; % might as well make things consistent
+        
+        priorityLevel = MaxPriority(wind);
+        Priority(priorityLevel);
+        
+        % Initialization of the connection with the Eyelink Gazetracker.
+        % exit program if this fails.
+        % This is where the eyetracker is set to dummy-mode, if that option was
+        % selected
+        DrawFormattedText(wind, ['If you''re seeing this for a while, ET might'...
+            ' not be connected. Press anykey to quit.'], 'center', 'center');
+        Screen('Flip', wind);
+        
+        if ~EyelinkInit(get_config('DummyMode'), 1)
+            log_msg(sprintf('Eyelink Init aborted.\n'));
+            post_experiment(true);
+        end
+        
+        [~, vs] = Eyelink('GetTrackerVersion');
+        log_msg(sprintf('Running experiment on a ''%s'' tracker.\n', vs ));
+        
+        % Set-up edf file
+        session.edf_file = [session.subject_code '.edf'];
+        edfERR  = Eyelink('Openfile', session.edf_file);
+        
+        if edfERR~=0
+            log_msg(sprintf('Cannot create EDF file ''%s'' ', session.edf_file));
+            post_experiment(true);
+        end
+        
+        % Send some commands to eyetracker to set up event parsing:
+        Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
+        Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
+        
+        Eyelink('command', 'select_parser_configuration 1');
+        Eyelink('command', 'sample_rate = 1000');
+        
+        % Set EDF file contents
+        Eyelink('command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+        Eyelink('command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
+        % Set link data (used for gaze cursor)
+        Eyelink('command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+        Eyelink('command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
+        
+    catch err
+        warning(err.message)
+        log_msg(err.message)
+        el = struct();
     end
-    
-    [~, vs] = Eyelink('GetTrackerVersion');
-    log_msg(sprintf('Running experiment on a ''%s'' tracker.\n', vs ));
-    
-    % Set-up edf file
-    session.edf_file = [session.subject_code '.edf'];
-    edfERR  = Eyelink('Openfile', session.edf_file);
-    
-    if edfERR~=0
-        log_msg(sprintf('Cannot create EDF file ''%s'' ', session.edf_file));
-        post_experiment(true);
-    end
-    
-    % Send some commands to eyetracker to set up event parsing:
-    Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
-    Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, session.win_rect(3)-1, session.win_rect(4)-1);
-    
-    Eyelink('command', 'select_parser_configuration 1');
-    Eyelink('command', 'sample_rate = 1000');
-    
-    % Set EDF file contents
-    Eyelink('command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-    Eyelink('command', 'file_sample_data  = LEFT,RIGHT,GAZE,HREF,AREA,GAZERES,STATUS');
-    % Set link data (used for gaze cursor)
-    Eyelink('command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-    Eyelink('command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
     
     %% RUN EXPERIMENT TRIALS %%
     
@@ -349,21 +361,23 @@ try
     post_experiment(0);
     
     
-catch my_err
+catch exp_err
         
-    log_msg(my_err.message);
-    log_msg(num2str([my_err.stack.line]));
+    log_msg(exp_err.message);
+    log_msg(num2str([exp_err.stack.line]));
     
     sca;
     
-    h= msgbox({'Experiment has encountered an error and shut down.'...
-        ['MSG: ' my_err.message] ['LINE:' num2str([my_err.stack.line])] ...
-        'Press OK to save results so far, and save err msg to log.' ...
-        'You should let the experiment owner know about this error.'}, ...
-    'Error', 'error');
-    uiwait(h)
+    if ~strcmpi('Experiment Ended.' , exp_err.message)
+        h= msgbox({'Experiment has encountered an error and shut down.'...
+            ['MSG: ' exp_err.message] ['LINE:' num2str([exp_err.stack.line])] ...
+            'Press OK to save results so far, and save err msg to log.' ...
+            'You should let the experiment owner know about this error.'}, ...
+        'Error', 'error');
+        uiwait(h)
+    end
     
-    if ~strcmpi(my_err.message,'Experiment ended.')
+    if ~strcmpi(exp_err.message,'Experiment ended.')
         post_experiment(true);
     end
     
