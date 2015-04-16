@@ -16,7 +16,11 @@ if ischar(value) || iscell(value)
 end
 
 if isempty(value)
-    value = default;
+    if strcmpi(default, 'error')
+        error(['Your config file must specify ' name])
+    else
+        value = default;
+    end
 end
 
 end
