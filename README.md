@@ -10,7 +10,7 @@ Structure of this code was originally based on Brock Ferguson's scripts for runn
 
 # Introduction
 
-This is a framework for running experiments in MATLAB. By making a few excel files (config.txt, stim_config.txt) to specify your experiment's stucture, you can easily and quickly set up many different types of experiments.
+This is a framework for running experiments in MATLAB. By making a few spreadsheet files (config.txt, stim_config.txt) to specify your experiment's stucture, you can easily and quickly set up many different types of experiments.
 
 The emphasis is on vision experiments that interface with SR-Research Eyelink Eyetrackers. However, this framework can be helpful in a broader set of cases than that.
 
@@ -99,8 +99,7 @@ This feature applies not just to the TrialNum column, but to the Condition, Phas
 The "Stim" column, especially in conjunction with the capacity to repeat trials described above, can be particularly useful. **Instead of specifying a particular stimulus to be repeated, you can specify a folder of stimuli. In this case, stimuli will be drawn from that folder, with a different one presented on each trial.**
 
 ___
-#### Advanced: 
-#### Method of Drawing Stim from Folder:
+##### Advanced: Method of Drawing Stim from Folder:
 
 You can specify how to draw stimuli from the folder with the optional column **"StimDrawFromFolderMethod"**.
 
@@ -113,6 +112,7 @@ The options for **"StimDrawFromFolderMethod"** are:
 - **Sample Randomly ('sample')** : Randomly sample without replacement. If number of trials is greater than number of stim in folder, exhaust folder contents before looping back over. Number of trials can also be less than number of stim.
 - **Sample Randomly with Replacement ('sample_replace')** : Randomly sample *with* replacement. 
 - **Sample Randomly Non-Consecutive ('sample_noconsec')** : Randomly sample, replace only as needed. It's easiest to explain behavior of this option with an example. Imagine you have 10 files (e.g., images) in a folder, and you want to present these for 30 trials. This option will present each of the 10 stim-files 3 times in total. It will pick the order randomly, with the constraint that the *same* stim-file can not be shown twice in a row. So this option is for when you have more trials than images. If this option is set on a block with 'TrialShuffle' set to 1, an error will be thrown (since shuffling the trials could put identical stim-files in consecutive order).
+
 ___
 
 ### Text Before and After a Trial:
@@ -145,7 +145,7 @@ ___
 
 ## Custom Trials
 
-*[Work in progress. For now, the 'custom_function.m' file in the Example folder should give you all the information you need.]*
+*[This section a work in progress. For now, the 'custom_function.m' file in the Example folder should give you all the information you need.]*
 
 ## Running the Experiment
 
@@ -156,13 +156,13 @@ You'll then be asked to enter session information about the participant, conditi
 ___
 ##### Advanced: Custom Session Information and Calling ETML Programmatically
 
-*[Work in progress]*
+*[This section a work in progress]*
 
 ___
 
 ## Getting the Data
 
-*[Work in progress.]*
+*[This section a work in progress.]*
 
 
 
