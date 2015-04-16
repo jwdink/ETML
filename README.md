@@ -121,8 +121,7 @@ The main focus of a trial is the stimulus being presented. Often, however, we wa
 These columns can be ommitted or left blank if these are not needed.
 ___
 
-#### Advanced: 
-#### Looping Through Multiple Messages for Same Stimulus:
+##### Advanced: Looping Through Multiple Messages for Same Stimulus:
 
 Both of these fields can either accept a single string, or a cell array of strings, e.g., for 'BeforeStimText' you could enter (all on one line):
 
@@ -149,8 +148,7 @@ Simple run ETML.m in MATLAB. It will open up a directory-chooser. Navigate to th
 You'll then be asked to enter session information about the participant, condition, etc. After this is done, the experiment will begin. 
 
 ___
-#### Advanced:
-#### Custom Session Information and Calling ETML Programmatically
+##### Advanced: Custom Session Information and Calling ETML Programmatically
 
 [Work in progress]
 
