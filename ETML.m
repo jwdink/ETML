@@ -87,8 +87,8 @@ try
     
     % Re-Format the Stimuli Config file into a useful table:
     stim_config_full = pad_struct(stim_config);
-    trial_record_path = ['data/', session.subject_code, '/' 'trial_record.txt'];
-    WriteStructsToText(trial_record_path, stim_config_full); % for testing
+    trial_record_path = ['data/', session.subject_code, '/' 'unshuffled_experiment_structure.txt'];
+    WriteStructsToText(trial_record_path, stim_config_full); % for debugging
     
     % Begin logging now
     session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'w');
@@ -361,23 +361,27 @@ catch exp_err
 end
 
 %% FXN_get_trial_config
-    function out = get_trial_config(trial_config, field)
+    function out = get_trial_config(trial_config, field, default)
         
         if is_in_cellarray(field, fieldnames(trial_config))
             % They have this column in their stim config:
             out = trial_config.(field);
         else
             % They don't. Let's see if there's a default value
-            switch field
-                case {'Duration', 'BSTDuration', 'ASTDuration'}
-                    out = 0;
-                    
-                case {'BeforeStimText', 'AfterStimText'}
-                    out = [];
-                    
-                otherwise
-                    error(['Column ' field ' not found in stim_config.txt'])
-                    
+            if nargin == 3
+                out = default;
+            else
+                switch field
+                    case {'Duration', 'BSTDuration', 'ASTDuration', 'FlipX', 'FlipY'}
+                        out = 0;
+                        
+                    case {'BeforeStimText', 'AfterStimText'}
+                        out = [];
+                        
+                    otherwise
+                        error(['Column ' field ' not found in stim_config.txt'])
+                        
+                end
             end
         end
     end
@@ -387,11 +391,11 @@ end
         if length(this_trial_row) > 1
             log_msg(['Please check: ' trial_record_path]);
             error(['Attempted to find a unique row corresponding to this trial, but there were multiple.'...
-                ' Check trial_record (see above). Something is probably wrong with stim_config.'])
+            ' Check unshuffled_experiment_structure.txt (see path above). Something is probably wrong with stim_config.'])
         elseif isempty(this_trial_row)
             log_msg(['Please check: ' trial_record_path]);
             error(['Attempted to find a unique row corresponding to this trial, but none exists.' ...
-                'Something is probably wrong with stim_config.']);
+            'Check unshuffled_experiment_structure.txt (see path above). Something is probably wrong with stim_config.']);
         end
     end
 
@@ -510,6 +514,12 @@ end
         
         % Show After Message:
         show_text(wind, trial_config, 'Before')
+        
+        % % TO DO!
+        %
+        % Save Keypress Data
+        %
+        % %
         
         % End trial
         if session.record_phases(trial_config.('Phase'));
@@ -806,16 +816,10 @@ end
         end
         
         % Get Flip Config:
-        if isfield(trial_config, 'FlipX') && ~is_default(trial_config.FlipX) && trial_config.FlipX
-            x = -1;
-        else
-            x =  1;
-        end
-        if isfield(trial_config, 'FlipY') && ~is_default(trial_config.FlipY) && trial_config.FlipY
-            y = -1;
-        else
-            y =  1;
-        end
+        flipx = get_trial_config(trial_config, 'FlipX');
+        flipy = get_trial_config(trial_config, 'FlipY');
+        if flipx; x = 1; else x = -1; end;
+        if flipy; y = 1; else y = -1; end
         
         % Texture Dimensions:
         tex_rect = Screen('Rect', tex);
@@ -825,42 +829,14 @@ end
         twidth  = tex_rect_o(3) - tex_rect_o(1);
         
         % Get Dim config:
-        if isfield(trial_config, 'DimX')
-            DimX = trial_config.DimX;
-            if ~( ischar(DimX) || is_default(DimX) )
-                % if they specified a number in pixels
-                tex_rect([1 3]) = [0 DimX];
-            elseif ischar(DimX)
-                % if they specified a percentage
-                DimX = strrep(DimX,'%','');
-                tex_rect(3) = tex_rect(3) * str2double(DimX)/100;
-            end
-            % else, just use dim of image/vid (tex_rect)
-        end
-        if isfield(trial_config, 'DimY')
-            DimY = trial_config.DimY;
-            if ~( ischar(DimY) || is_default(DimY) )
-                % if they specified a number in pixels
-                tex_rect([2 4]) = [0 DimY];
-            elseif ischar(DimY)
-                % if they specified a percentage
-                DimY = strrep(DimY,'%','');
-                tex_rect(4) = tex_rect(4) * str2double(DimY)/100;
-            end
-            % else, just use dim of image/vid (tex_rect)
-        end
+        dim_x = get_trial_config(trial_config, 'DimX', tex_rect(3) );
+        dim_y = get_trial_config(trial_config, 'DimY', tex_rect(4) );
+        tex_rect([1 3]) = [0 dim_x];
+        tex_rect([2 4]) = [0 dim_y];
         
         % Get Pos config:
-        if isfield(trial_config, 'StimCenterX') && ~is_default(trial_config.StimCenterX)
-            center_x = trial_config.StimCenterX;
-        else
-            center_x = win_rect(3) / 2;
-        end
-        if isfield(trial_config, 'StimCenterY') && ~is_default(trial_config.StimCenterY)
-            center_y = trial_config.StimCenterY;
-        else
-            center_y = win_rect(4) / 2;
-        end
+        center_x = get_trial_config(trial_config, 'StimCenterX', win_rect(3) / 2);
+        center_y = get_trial_config(trial_config, 'StimCenterY', win_rect(4) / 2);
         dest_rect = CenterRectOnPoint(tex_rect, center_x, center_y);
         
         % Mirroring/Flipping the texture is done along the center of the tex.

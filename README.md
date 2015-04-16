@@ -26,7 +26,6 @@ You need to completely customize what happens on each trial, but you want easy m
 * All interfacing with Eyelink eyetracker abstracted and taken care of for you. Worry about making your experiment, not sifting through the eye tracker documentation.
 * Detailed, timestamped information sent to eye tracker and to a log text file as experiment runs. Includes all messages, warnings, and keypresses. 
 * Key information about trial (condition, stimuli information) sent to a text file, with included R code to parse into 'tidy' R dataframe, ready for analysis. This is important, because it means you can run experiments that don't even use an eyetracker. For those that do, same information is sent to eye tracker.
-* Experiment structure *for each participant* is output to a text file that's easily readable in excel
 * Experiment can be terminated at any point by pressing and holding ESC, and data so far will be saved.
 * Ability to write your own script for what's presented on each trial. Let ETML handle the eyetracker and the experiment structure, and just worry about scripting the actual trial contents.
 
@@ -68,7 +67,14 @@ There are several stimuli types supported:
 * **Image** : An image or directory of images
 * **Video** : A video or directory of videos (requires GStreamer).
 * **Slideshow** : Identical to image, except images are advanced using arrow keys, and you can go backwards to previous images. Useful for presenting instructions to experiment.
-* **Custom** : A custom script you wrote yourself. Will simply call 'custom_function' on trials with this stim_type. See 'Custom Trials' section belwo.
+* **Custom** : A custom script you wrote yourself. Will simply call 'custom_function' on trials with this stim_type. See 'Custom Trials' section below.
+
+ETML knows how to interpret any of the following optional columns (for images and videos):
+
+* **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
+* **StimCenterX, StimCenterY** : What position on the screen do you want the stim to be? (E.g., 400,400 puts the center of the 400 pixels below the top of the screen, and 400 pixels rightwards of the left-side of the screen). Default is centered.
+* **FlipX, FlipY** : Mirror the stim? Default no.
+
 
 ### Trial / Stimuli Duration
 
@@ -93,7 +99,8 @@ This feature applies not just to the TrialNum column, but to the Condition, Phas
 The "Stim" column, especially in conjunction with the capacity to repeat trials described above, can be particularly useful. **Instead of specifying a particular stimulus to be repeated, you can specify a folder of stimuli. In this case, stimuli will be drawn from that folder, with a different one presented on each trial.**
 
 ___
-##### Advanced: Method of Drawing Stim from Folder:
+#### Advanced: 
+#### Method of Drawing Stim from Folder:
 
 You can specify how to draw stimuli from the folder with the optional column **"StimDrawFromFolderMethod"**.
 
@@ -106,9 +113,7 @@ The options for **"StimDrawFromFolderMethod"** are:
 - **Sample Randomly ('sample')** : Randomly sample without replacement. If number of trials is greater than number of stim in folder, exhaust folder contents before looping back over. Number of trials can also be less than number of stim.
 - **Sample Randomly with Replacement ('sample_replace')** : Randomly sample *with* replacement. 
 - **Sample Randomly Non-Consecutive ('sample_noconsec')** : Randomly sample, replace only as needed. It's easiest to explain behavior of this option with an example. Imagine you have 10 files (e.g., images) in a folder, and you want to present these for 30 trials. This option will present each of the 10 stim-files 3 times in total. It will pick the order randomly, with the constraint that the *same* stim-file can not be shown twice in a row. So this option is for when you have more trials than images. If this option is set on a block with 'TrialShuffle' set to 1, an error will be thrown (since shuffling the trials could put identical stim-files in consecutive order).
-
 ___
-
 
 ### Text Before and After a Trial:
 
