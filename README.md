@@ -93,8 +93,7 @@ This feature applies not just to the TrialNum column, but to the Condition, Phas
 The "Stim" column, especially in conjunction with the capacity to repeat trials described above, can be particularly useful. **Instead of specifying a particular stimulus to be repeated, you can specify a folder of stimuli. In this case, stimuli will be drawn from that folder, with a different one presented on each trial.**
 
 ___
-#### Advanced: 
-#### Method of Drawing Stim from Folder:
+##### Advanced: Method of Drawing Stim from Folder:
 
 You can specify how to draw stimuli from the folder with the optional column **"StimDrawFromFolderMethod"**.
 
@@ -107,7 +106,9 @@ The options for **"StimDrawFromFolderMethod"** are:
 - **Sample Randomly ('sample')** : Randomly sample without replacement. If number of trials is greater than number of stim in folder, exhaust folder contents before looping back over. Number of trials can also be less than number of stim.
 - **Sample Randomly with Replacement ('sample_replace')** : Randomly sample *with* replacement. 
 - **Sample Randomly Non-Consecutive ('sample_noconsec')** : Randomly sample, replace only as needed. It's easiest to explain behavior of this option with an example. Imagine you have 10 files (e.g., images) in a folder, and you want to present these for 30 trials. This option will present each of the 10 stim-files 3 times in total. It will pick the order randomly, with the constraint that the *same* stim-file can not be shown twice in a row. So this option is for when you have more trials than images. If this option is set on a block with 'TrialShuffle' set to 1, an error will be thrown (since shuffling the trials could put identical stim-files in consecutive order).
+
 ___
+
 
 ### Text Before and After a Trial:
 
