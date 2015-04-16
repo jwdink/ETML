@@ -22,7 +22,7 @@ You need to completely customize what happens on each trial, but you want easy m
 
 ### Key Features:
 
-* Manage experiment structure via a text file viewable in Excel, rather than a series of convoluted, nested 'for'-loops inside your experiment code.
+* Manage experiment structure via a file viewable in Excel, rather than a series of convoluted, nested 'for'-loops inside your experiment code.
 * All interfacing with Eyelink eyetracker abstracted and taken care of for you. Worry about making your experiment, not sifting through the eye tracker documentation.
 * Detailed, timestamped information sent to eye tracker and to a log text file as experiment runs. Includes all messages, warnings, and keypresses. 
 * Key information about trial (condition, stimuli information) sent to a text file, with included R code to parse into 'tidy' R dataframe, ready for analysis. This is important, because it means you can run experiments that don't even use an eyetracker. For those that do, same information is sent to eye tracker.
@@ -30,17 +30,17 @@ You need to completely customize what happens on each trial, but you want easy m
 * Experiment can be terminated at any point by pressing and holding ESC, and data so far will be saved.
 * Ability to write your own script for what's presented on each trial. Let ETML handle the eyetracker and the experiment structure, and just worry about scripting the actual trial contents.
 
-# Set-Up Guide
+# Guide
 
 First, download this git. The easiest way to get going is simply to copy and paste the "Example" folder, renaming it to your experiment's name.
 
-## Config.txt
+## Getting Set-Up : Config.txt
 
 If you open the example config.txt in Excel, you'll see it has a couple entries, along with a description of what each of these entries is for. I won't relist those here, since the example config.txt explains everything fully (exception is the 'CustomFields', explained in the next paragraph). The only fields that are strictly required are 'StudyName' and 'RecordingPhases' (all others will be supplied a default) but you'll likely want to explicitly set the other fields as well.
 
 The 'CustomFields' entry specifies columns in 'Stim_Config' that you have added yourself (i.e., they aren't the pre-designated ones described below) that you'd liked saved in your data. All columns described in the next section are automatically saved in your data, but you might want to add your own columns--either for convenience (they give descriptions to blocks/trials that are otherwise just numbered) or necessity (they help determine things in a custom trial).
 
-## Stim_Config.txt
+## Getting Set-Up : Stim_Config.txt
 
 Open this file in Excel to follow along with this guide. You'll see a table where each column specifies some details about trial or trials, and each row represents either a single trial, or a sequence of trials.
 
@@ -66,7 +66,7 @@ A 'trial' should, for the most part, be thought of as a single stimulus presenta
 There are several stimuli types supported:
 
 * **Image** : An image or directory of images
-* **Video** : A video or directory of videos
+* **Video** : A video or directory of videos (requires GStreamer).
 * **Slideshow** : Identical to image, except images are advanced using arrow keys, and you can go backwards to previous images. Useful for presenting instructions to experiment.
 * **Custom** : A custom script you wrote yourself. Will simply call 'custom_function' on trials with this stim_type. See 'Custom Trials' section belwo.
 
@@ -140,21 +140,24 @@ ___
 
 ## Custom Trials
 
-[Work in progress. For now, the 'custom_function.m' file in the Example folder should give you all the information you need.]
+*[Work in progress. For now, the 'custom_function.m' file in the Example folder should give you all the information you need.]*
 
 ## Running the Experiment
 
-Simple run ETML.m in MATLAB. It will open up a directory-chooser. Navigate to the directory with your experiment in it.
+Simply run ETML.m in MATLAB. It will open up a directory-chooser. Navigate to the directory with your experiment in it.
 
 You'll then be asked to enter session information about the participant, condition, etc. After this is done, the experiment will begin. 
 
 ___
 ##### Advanced: Custom Session Information and Calling ETML Programmatically
 
-[Work in progress]
+*[Work in progress]*
 
 ___
 
+## Getting the Data
+
+*[Work in progress.]*
 
 
 

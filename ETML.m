@@ -260,7 +260,7 @@ try
         this_phase_rows = get_rows(stim_config_full, session.condition, this_phase);
         
         % Calibrate the Eye Tracker?:
-        et_calibrate(this_phase)
+        et_calibrate(wind, this_phase)
         
         % Run Blocks:
         blocks = unique( [stim_config_full(this_phase_rows).('Block')] );
@@ -320,7 +320,7 @@ try
                 check_trial(this_trial_row)
                 
                 %%% Run Trial:
-                start_trial(trial_index, block_index, stim_config_full(this_trial_row));
+                start_trial(wind, trial_index, block_index, stim_config_full(this_trial_row));
                 
                 if ~exist('out_struct', 'var')
                     out_struct = struct();
@@ -329,7 +329,7 @@ try
                 [new_trial_index, out_struct] =...
                     show_stimuli(wind, trial_index , stim_config_full(this_trial_row), out_struct, GL);
                 
-                stop_trial(trial_index, block_index, stim_config_full(this_trial_row));
+                stop_trial(wind, trial_index, block_index, stim_config_full(this_trial_row));
                 %%%
             end
         end
@@ -360,8 +360,29 @@ catch exp_err
     
 end
 
-%% FXN_check_trial
+%% FXN_get_trial_config
+    function out = get_trial_config(trial_config, field)
+        
+        if is_in_cellarray(field, fieldnames(trial_config))
+            % They have this column in their stim config:
+            out = trial_config.(field);
+        else
+            % They don't. Let's see if there's a default value
+            switch field
+                case {'Duration', 'BSTDuration', 'ASTDuration'}
+                    out = 0;
+                    
+                case {'BeforeStimText', 'AfterStimText'}
+                    out = [];
+                    
+                otherwise
+                    error(['Column ' field ' not found in stim_config.txt'])
+                    
+            end
+        end
+    end
 
+%% FXN_check_trial
     function check_trial(this_trial_row, trial_record_path)
         if length(this_trial_row) > 1
             log_msg(['Please check: ' trial_record_path]);
@@ -375,7 +396,7 @@ end
     end
 
 %% FXN_et_calibrate
-    function et_calibrate(this_phase)
+    function et_calibrate(wind, this_phase)
         if session.record_phases(this_phase)
             log_msg('It is a recording phase.');
             
@@ -415,30 +436,29 @@ end
         out = find(not(cellfun('isempty', ind)));
     end
 
-
 %% FXN_show_stimuli
     function [new_trial_index, out_struct] = show_stimuli (wind, trial_index, trial_config, out_struct, GL)
         
-        if     ~isempty( strfind(trial_config.('StimType'), 'img') ) || ...
-               ~isempty( strfind(trial_config.('StimType'), 'slideshow') )
-
+        stim_type = lower( get_trial_config(trial_config, 'StimType') );
+        
+        if any( is_in_cellarray( stim_type , {'image', 'img', 'slideshow'} ) )
+            
+            % Image:
             new_trial_index = ...
                 show_img(wind, trial_index, trial_config, GL);
             
-        elseif strfind(trial_config.('StimType'), 'vid')
+        elseif is_in_cellarray( stim_type , {'vid', 'video'} )
             
+            % Video:
             new_trial_index = ...
                 show_vid(wind, trial_index, trial_config, GL);
             
-        elseif ~isempty( strfind(trial_config.('StimType'), 'text') )
+        elseif strcmp(stim_type, 'custom')
             
-            new_trial_index = ... 
-                show_text(wind, trial_index, trial_config);
-            
-        elseif ~isempty( strfind(trial_config.('StimType'), 'custom') )
-            
+            % Custom Script:
             [new_trial_index, out_struct] =...
                 custom_function(wind, trial_index, trial_config, out_struct); 
+            
         else
             errmsg = ['StimType "' trial_config.('StimType') '" is unsupported.'];
             error(errmsg);
@@ -447,7 +467,7 @@ end
     end
 
 %% FXN_start_trial
-    function start_trial(trial_index, block_index, trial_config)
+    function start_trial(wind, trial_index, block_index, trial_config)
         
         if session.record_phases(trial_config.('Phase'));
             % ET is recording:
@@ -469,7 +489,7 @@ end
         add_data('trial', trial_index, phase);
         add_data('block', block_index, phase);
         other_fields1 = {'Condition', 'PhaseNum', 'Stimuli', 'StimType', 'FlipX', 'FlipY'};
-        other_fields2 = smart_eval( get_config('CustomFields') );
+        other_fields2 = eval_field( get_config('CustomFields') );
         other_fields = [other_fields1 other_fields2];
         % also some fields that will be inserted at stim-presentation (because they can be dynamically set):
         % 'DimX', 'DimY','StimCenterX', 'StimCenterY', 'duration'
@@ -480,10 +500,16 @@ end
             end
         end
         
+        % Show Before Message:
+        show_text(wind, trial_config, 'Before')
+        
     end
 
 %% FXN_stop_trial
-    function stop_trial(trial_index, block_index, trial_config)
+    function stop_trial(wind, trial_index, block_index, trial_config)
+        
+        % Show After Message:
+        show_text(wind, trial_config, 'Before')
         
         % End trial
         if session.record_phases(trial_config.('Phase'));
@@ -529,63 +555,24 @@ end
         end
     end
 
-%% FXN_is_default
-    function [out] = is_default (config)
-        
-        if isempty(config)
-            % if empty
-            out = 1;
-            return
-        end
-        
-        if length(config) == 1 && config(1) == 0
-            % if zero or nan
-            out = 1;
-            return
-        end
-        
-        if sum(isnan(config))
-            % if any nans
-            out = 1;
-            return
-        end
-        
-        out = 0;
-        return
-        
-    end
 %% FXN_show_text
-    function [new_trial_index] = show_text(wind, trial_index, trial_config)
+    function show_text(wind, trial_config, before_or_after)
         
         while KbCheck; end;
         
+        before_or_after(1) = upper( before_or_after(1) );
+        
         % What text to display?
-        the_text = trial_config.('Stimuli');
+        the_text = trial_config.([before_or_after 'StimText']);
+        if isempty(the_text)
+            return
+        end
         
         % How long?
-        [duration, min_duration] = set_duration(trial_config);
-        
-        % Get Pos config:
-        if isfield(trial_config, 'StimCenterX') && ~is_default(trial_config.StimCenterX)
-            center_x = trial_config.StimCenterX;
-        else
-            center_x = session.win_rect(3) / 2;
-        end
-        if isfield(trial_config, 'StimCenterY') && ~is_default(trial_config.StimCenterY)
-            center_y = trial_config.StimCenterY;
-        else
-            center_y = session.win_rect(4) / 2;
-        end
-        
-        % Offset from center not from upper right:
-        [bbox] = Screen('TextBounds', wind, the_text);
-        twid = bbox(3) - bbox(1);
-        center_x = center_x - twid/2;
-        theight = bbox(4) - bbox(2);
-        center_y = center_y - theight/2;
+        [duration, min_duration] = set_duration(trial_config, before_or_after);
         
         % Draw:
-        DrawFormattedText(wind, the_text, center_x, center_y);
+        DrawFormattedText(wind, the_text, 'center', 'center');
         Screen('Flip', wind);
         text_start = GetSecs();
         
@@ -595,62 +582,49 @@ end
             keycode = check_keypress(keycode, trial_config.('Phase'));
             
             if GetSecs() - text_start >= duration
-                break % end movie
+                break % end 
             end
             
-            if sum(keycode)
+            if any(keycode)
                 if GetSecs() - text_start >= min_duration
-                  break % end movie
+                  break % end 
                 end
             end
         end
         
-        new_trial_index = trial_index + 1;
-        return
-        
         %
-        function [duration, min_duration] = set_duration(trial_config)
-            if isfield(trial_config, 'Duration')
-                dur_config = smart_eval(trial_config.('Duration'));
-                if length(dur_config) > 1
-                    if dur_config(2) == 0
-                        duration = Inf;
-                    else
-                        duration = dur_config(2);
-                    end
-                    min_duration = dur_config(1);
-                else
-                    if is_default(dur_config)
-                        duration = Inf;
-                        min_duration = 0;
-                    else
-                        duration = dur_config;
-                        min_duration = duration;
-                    end
-                end
+        function [duration, min_duration] = set_duration(trial_config, before_or_after)
+            
+            dur_field = get_trial_config(trial_config, [before_or_after(1) 'STDuration']);
+            dur_config = eval_field(dur_field);
+            
+            if length(dur_config) > 1
+                duration = dur_config(2);
+                min_duration = dur_config(1);
             else
-                duration = Inf;
-                min_duration = 0;
+                if isempty(dur_config) || dur_config == 0
+                    duration = Inf;
+                    min_duration = 0;
+                else
+                    duration = dur_config;
+                    min_duration = duration;
+                end
             end
             
         end
         
     end
+
 %% FXN_show_vid
     function [new_trial_index] = show_vid(wind, trial_index, trial_config, GL)
-        
-        mov_rate = 1;
         
         % Open Movie(s):
         win_rect = session.win_rect; % so that repetitive loop doesn't have to access global var
         [movie mov_dur fps imgw imgh] = ...
             Screen('OpenMovie', wind, [session.base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
 
-        % Custom Start time?:
-        [tiv_to_start,mov_dur] = set_tiv_to_start(trial_config, mov_dur);
-        
         % Duration, duration-jitter:
-        [duration, min_duration] = set_duration(trial_config, mov_dur, mov_rate);
+        [duration, min_duration] = set_duration(trial_config, mov_dur);
 
         % Save Stim Attributes:
         tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
@@ -662,7 +636,7 @@ end
         % Start playback:
         Screen('PlayMovie', movie , mov_rate);
         WaitSecs(.10);
-        Screen('SetMovieTimeIndex', movie, tiv_to_start);
+        Screen('SetMovieTimeIndex', movie, 0);
 
         log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')), trial_config.('Phase') );
         vid_start = GetSecs();
@@ -706,67 +680,27 @@ end
         new_trial_index = trial_index + 1;
         WaitSecs(.1);
 
-        
-        function [tiv_to_start,mov_dur] = set_tiv_to_start(trial_config, mov_dur)
-            if isfield(trial_config, 'TimeInVidToStart')
-                tiv_config = smart_eval(trial_config.('TimeInVidToStart'));
-                if ~is_default(tiv_config)
-                    max_tiv = max(tiv_config);
-                    min_tiv = min(tiv_config);
-                    tiv_to_start = (max_tiv-min_tiv)*rand() + min_tiv;
-                    % since we're coming into the film late, its time-left duration
-                    % is shoter than its total duration:
-                    mov_dur = mov_dur - tiv_to_start;
-                else
-                    tiv_to_start = 0;
-                end
-                add_data('tiv_tostart', tiv_to_start, trial_config.('Phase'));
+        %
+        function [duration, min_duration] = set_duration(trial_config, mov_dur)
+            
+            dur_field = get_trial_config(trial_config, 'Duration');
+            dur_config = eval_field(dur_field);
+            
+            if length(dur_config) > 1 % they specified min and max
+                duration = dur_config(2);
+                min_duration = dur_config(1);
             else
-                tiv_to_start = 0;
-            end
-        end
-        
-        function [duration, min_duration] = set_duration(trial_config, mov_dur, mov_rate)
-            if isfield(trial_config, 'Duration')
-                dur_config = smart_eval(trial_config.('Duration'));
-                if length(dur_config) > 1
-                    if dur_config(2) == 0
-                        duration = mov_dur * 1/mov_rate;
-                    else
-                        duration = dur_config(2);
-                    end
-                    min_duration = dur_config(1);
-                else
-                    if is_default(dur_config)
-                        duration = mov_dur * 1/mov_rate;
-                        min_duration = duration;
-                    else
-                        duration = dur_config;
-                        min_duration = duration;
-                    end
+                if isempty(dur_config) || dur_config == 0 % they specified nothing
+                    duration = mov_dur;
+                    min_duration = mov_dur;
+                else                                      % they specified single number, use as min & max
+                    duration = dur_config;
+                    min_duration = dur_config;
                 end
-            else
-                duration = mov_dur;
-                min_duration = duration;
             end
             
-            % Duration jitter:
-            if isfield(trial_config, 'DurJitter')
-                djit_config = smart_eval(trial_config.('DurJitter'));
-                if ~is_default(djit_config)
-                    if length(djit_config) == 1
-                        djit_config(2) = 0;
-                    end
-                    max_djit = max(djit_config);
-                    min_djit = min(djit_config);
-                    
-                    dur_jit = (max_djit-min_djit)*rand() + min_djit;
-                    duration = duration + dur_jit;
-                    min_duration = min_duration + dur_jit;
-                end
-            end
         end
-        
+       
     end
 
 %% FXN_show_img
@@ -776,63 +710,17 @@ end
         win_rect = session.win_rect;
         
         % Get trial info about stim duration:
-        if isfield(trial_config, 'Duration')
-            dur_config = smart_eval(trial_config.('Duration'));
-            if length(dur_config) > 1
-                duration = dur_config(2);
-                min_duration = dur_config(1);
-            else
-                if is_default(dur_config)
-                    % if they entered nothing, assume image until keypress
-                    duration = Inf;
-                    min_duration = 0;
-                else
-                    % if they entered 1 number, assume stim up for that
-                    % amount of time (regardless of keypress)
-                    duration = dur_config;
-                    min_duration = duration;
-                end
-            end
-        else
-            % if they entered nothing, assume image until keypress
-            duration = Inf;
-            min_duration = 0;
-        end
-        
-        % Duration jitter:
-        if isfield(trial_config, 'DurJitter')
-            djit_config = smart_eval(trial_config.('DurJitter'));
-            if ~is_default(djit_config)
-                if length(djit_config) == 1
-                    djit_config(2) = 0;
-                end
-                max_djit = max(djit_config);
-                min_djit = min(djit_config);
-
-                dur_jit = (max_djit-min_djit)*rand() + min_djit;
-                duration = duration + dur_jit;
-                min_duration = min_duration + dur_jit;
-            end
-        end 
+        [duration, min_duration] = set_duration(trial_config);
         
         % Slideshow:
-        if strfind('slideshow', trial_config.('StimType'))
-            slideshow = 1;
-        else
-            slideshow = 0;
-        end 
-        
+        slideshow = strcmpi('slideshow', trial_config.('StimType'));
+
         % Get image:
         image = imread(stim_path);                                      % read in image file
         tex = Screen('MakeTexture', wind, image, [], [], [], 1);        % make texture
         draw_tex(wind, tex, trial_index, trial_config, GL, win_rect, 'save_stim_info'); % draw
         
         save_img_for_dv(trial_index, trial_config);
-        
-        if session.dummy_mode
-            % Draw Interest Areas
-            % --to do--
-        end
         
         while KbCheck; end; % if keypress from prev slide is still happening, we wait til its over
         log_msg( sprintf('Displaying Image: %s', stim_path) , trial_config.('Phase'));
@@ -880,6 +768,29 @@ end
         end
         
         check_keypress(keycode, trial_config.('Phase'), 'flush'); % flush currently pressed keys
+        
+        
+        %
+        function [duration, min_duration] = set_duration(trial_config)
+            
+            dur_field = get_trial_config(trial_config, 'Duration');
+            dur_config = eval_field(dur_field);
+            
+            if length(dur_config) > 1 % they specified min and max
+                duration = dur_config(2);
+                min_duration = dur_config(1);
+            else
+                if isempty(dur_config) || dur_config == 0 % they specified nothing
+                    duration = Inf;
+                    min_duration = 0;
+                else                                      % they specified single number, use as min & max
+                    duration = dur_config;
+                    min_duration = dur_config;
+                end
+            end
+            
+        end
+       
         
     end
 
