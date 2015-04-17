@@ -109,9 +109,11 @@ The options for **"StimDrawFromFolderMethod"** are:
 
 - **Ascending ('asc')** : The default. Pick the filenames within the folder in alphabetical/numeric order.
 - **Descending ('desc')** : Pick the filenames within the folder in reverse-alphabetical/numeric order.
-- **Sample Randomly ('sample')** : Randomly sample without replacement. If number of trials is greater than number of stim in folder, exhaust folder contents before looping back over. Number of trials can also be less than number of stim.
+- **Sample Randomly ('sample')** : Randomly sample without replacement. 
+  - If number of stimuli is greater than or equal to number of trials, this has obvious behavior: draw from pool of possible stimuli for each trial.
+  - If number of stimuli is less than number of trials, behavior is easiest to explain by example: if there are 10 stimuli, and 20 trials, this will sample without replacement as if there was two of each stimuli. (Number of trials must be an even multiple of number of stimuli.) By default, this does not allow consecutive presentation of the same stim-item (which means if there are only two stim-items, this will not actually shuffle!).
+- **Sample Randomly, Allow Consecutive ('sample_consec')** : Same as above, but this *does* allow for consecutive presentation of identical stim-items.
 - **Sample Randomly with Replacement ('sample_replace')** : Randomly sample *with* replacement. 
-- **Sample Randomly Non-Consecutive ('sample_noconsec')** : Randomly sample, replace only as needed. It's easiest to explain behavior of this option with an example. Imagine you have 10 files (e.g., images) in a folder, and you want to present these for 30 trials. This option will present each of the 10 stim-files 3 times in total. It will pick the order randomly, with the constraint that the *same* stim-file can not be shown twice in a row. So this option is for when you have more trials than images. If this option is set on a block with 'TrialShuffle' set to 1, an error will be thrown (since shuffling the trials could put identical stim-files in consecutive order).
 
 ___
 
@@ -137,10 +139,9 @@ Both of these fields can either accept a single string, or a cell array of strin
  "Find the oddball in this image"}
 ``` 
 
-When a cell array like this is supplied, the stimulus in the 'Stim' column will be presented once for EACH of these messages. If 'Stim' specifies a folder rather than a single file, each file in that folder will be presented once for each of these messages. In the latter case, all the stim-files will be looped through paired with the first question, before starting over and looping through the second question, etc. You can also randomly sample from these question/stim-item pairings with the options described in
+When a cell array like this is supplied, the stimulus in the 'Stim' column will be presented once for EACH of these messages. Similarly, if 'Stim' specifies a folder (not a single file), each image will be shown three times in a row, one for each message. So if you want *all* stim-files in a folder to be shown, make sure your TrialNum column reflects this: for example, for ten images in a folder, and three different 'before' messages, the "TrialNum" column should specify `[1:30]` (3 trials for each of the 10 images). 
 
-
-Make sure your TrialNum column reflects this: for example, if you have ten images in a folder, and you have three different 'before' messages, your "TrialNum" column should specify `[1:30]` (3 trials for each of the 10 images). 
+You can also randomly sample from these question/stim-item pairings with the options described in the previous section ('Method of Drawing Stim from Folder'). One useful option is the non-consecutive option: randomly select an stim-item and a question to show before/after it, with the constraint that the same stim-item can't be shown twice in a row.
 
 BeforeStimText and AfterStimText must match: if one is a cell array of length three, the other must be too. If you'd like to change the before text with a cell array but always have the same after text, you could just make the after text a cell array with the same item in each cell.
 ___
