@@ -90,7 +90,7 @@ For 'default' behavior, leave blank or enter 0. 'Default' behavior is different 
 
 A key feature of ETML is that you don't have to specify every single trial manually. Instead, you can use indexing to specify trials. This follows the same syntax as MATLAB, except you must always wrap the numbers in brackets (otherwise excel will think it's a timestamp).
 
-For example, if I have a row where stim is "repetitive_picture.png", and I want that stim to be shown on trials 1 through 10, I would enter `[1:10]` in the TrialNum column for that row (brackets required!!). Or, if I wanted it presented only on *even* trials, I could enter `[2:2:10]`. Any indexing possible in MATLAB will be obeyed here, making this a powerful tool.
+For example, if I have a row where stim is "repetitive_picture.png", and I want that stim to be shown on trials 1 through 10, I would enter `[1:10]` in the TrialNum column for that row (brackets required!!). Or, if I wanted it presented only on *even* trials, I could enter `[2:2:10]`. Any indexing possible in MATLAB will be obeyed here, making this a powerful tool. For example, I could easily make an image flipped on half of the trials, or change its position every fourth trial, etc.
 
 This feature applies not just to the TrialNum column, but to the Condition, PhaseNum, and BlockNum columns as well.
 
@@ -137,7 +137,10 @@ Both of these fields can either accept a single string, or a cell array of strin
  "Find the oddball in this image"}
 ``` 
 
-When a cell array like this is supplied, the stimulus in the 'Stim' column will be presented once for EACH of these messages. If 'Stim' specifies a folder rather than a single file, each file in that folder will be presented once for each of these messages. Make sure your TrialNum column reflects this: for example, if you have ten images in a folder, and you have three different 'before' messages, your "TrialNum" column should specify `[1:30]` (3 trials for each of the 10 images). 
+When a cell array like this is supplied, the stimulus in the 'Stim' column will be presented once for EACH of these messages. If 'Stim' specifies a folder rather than a single file, each file in that folder will be presented once for each of these messages. In the latter case, all the stim-files will be looped through paired with the first question, before starting over and looping through the second question, etc. You can also randomly sample from these question/stim-item pairings with the options described in
+
+
+Make sure your TrialNum column reflects this: for example, if you have ten images in a folder, and you have three different 'before' messages, your "TrialNum" column should specify `[1:30]` (3 trials for each of the 10 images). 
 
 BeforeStimText and AfterStimText must match: if one is a cell array of length three, the other must be too. If you'd like to change the before text with a cell array but always have the same after text, you could just make the after text a cell array with the same item in each cell.
 ___

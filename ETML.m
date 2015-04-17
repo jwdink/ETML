@@ -268,8 +268,8 @@ try
         % Shuffle block order?:
         if stim_config_full(this_block_rows(1)).('BlockShuffle')
             log_msg('Shuffling blocks in this phase');
-            idx = randperm(length(trials));
-            blocks = blocks(idx);
+            bidx = randperm(length(trials));
+            blocks = blocks(bidx);
         end
         
         block_index = 0;
@@ -294,9 +294,7 @@ try
             
             % Shuffle trial order?:
             if get_stim_config(this_block_rows(1), 'TrialShuffle')
-                log_msg('Shuffling trials in this block');
-                idx = randperm(length(trials));
-                trials = trials(idx);
+                trials = shuffle_trials(trials, this_block_rows); 
             end
             
             new_trial_index = 1;
@@ -360,30 +358,22 @@ catch exp_err
     
 end
 
-%% FXN_get_trial_config
-    function out = get_trial_config(trial_config, field, default)
+%% FXN_shuffle_trials
+
+    function trials = shuffle_trials(trials, this_block_rows)
         
-        if is_in_cellarray(field, fieldnames(trial_config))
-            % They have this column in their stim config:
-            out = trial_config.(field);
+        draw_meth = get_stim_config(this_block_rows(1), 'StimDrawFromFolderMethod');
+        if strcmpi(draw_meth, 'sample_noconsec')
+            shufmsg = ['You''ve selected incompatible options: trial shuffling'...
+                ' and non-consecutive stimuli sampling. Ignoring the former.'];
+            warning(shufmsg); %#ok<WNTAG>
+            log_msg(shufmsg);
         else
-            % They don't. Let's see if there's a default value
-            if nargin == 3
-                out = default;
-            else
-                switch field
-                    case {'Duration', 'BSTDuration', 'ASTDuration', 'FlipX', 'FlipY'}
-                        out = 0;
-                        
-                    case {'BeforeStimText', 'AfterStimText'}
-                        out = [];
-                        
-                    otherwise
-                        error(['Column ' field ' not found in stim_config.txt'])
-                        
-                end
-            end
+            log_msg('Shuffling trials in this block');
+            tidx = randperm(length(trials));
+            trials = trials(tidx);
         end
+        
     end
 
 %% FXN_check_trial
@@ -492,7 +482,7 @@ end
         % Send variables to EDF (if recording), session txt, and log txt:
         add_data('trial', trial_index, phase);
         add_data('block', block_index, phase);
-        other_fields1 = {'Condition', 'PhaseNum', 'Stimuli', 'StimType', 'FlipX', 'FlipY'};
+        other_fields1 = {'Condition', 'PhaseNum', 'Stim', 'StimType', 'FlipX', 'FlipY'};
         other_fields2 = eval_field( get_config('CustomFields') );
         other_fields = [other_fields1 other_fields2];
         % also some fields that will be inserted at stim-presentation (because they can be dynamically set):
@@ -548,7 +538,7 @@ end
         if session.record_phases(trial_config.('Phase'))
             
             if nargin < 3
-                imgpath = trial_config.('Stimuli');
+                imgpath = trial_config.('Stim');
             else
                 image_array = Screen('GetImage', tex ); 
                 imgname = ['img' ...
@@ -631,7 +621,7 @@ end
         % Open Movie(s):
         win_rect = session.win_rect; % so that repetitive loop doesn't have to access global var
         [movie mov_dur fps imgw imgh] = ...
-            Screen('OpenMovie', wind, [session.base_dir trial_config.('Stimuli')] ); %#ok<NASGU,ASGLU>
+            Screen('OpenMovie', wind, [session.base_dir trial_config.('Stim')] ); %#ok<NASGU,ASGLU>
 
         % Duration, duration-jitter:
         [duration, min_duration] = set_duration(trial_config, mov_dur);
@@ -648,7 +638,7 @@ end
         WaitSecs(.10);
         Screen('SetMovieTimeIndex', movie, 0);
 
-        log_msg( sprintf('Playing Video: %s', trial_config.('Stimuli')), trial_config.('Phase') );
+        log_msg( sprintf('Playing Video: %s', trial_config.('Stim')), trial_config.('Phase') );
         vid_start = GetSecs();
         
         keycode = check_keypress([], trial_config.('Phase'));
@@ -716,7 +706,7 @@ end
 %% FXN_show_img
     function [new_trial_index] = show_img (wind, trial_index, trial_config, GL)
         
-        stim_path = trial_config.('Stimuli');
+        stim_path = trial_config.('Stim');
         win_rect = session.win_rect;
         
         % Get trial info about stim duration:
@@ -997,7 +987,7 @@ end
                     % stimuli path:
                     
                     % Get stim information:
-                    stim = config_struct(row).('Stimuli');
+                    stim = config_struct(row).('Stim');
                                         
                     if ~isempty( cell2mat( strfind( {'image', 'slideshow', 'video'}, config_struct(row).('StimType') ) ) )
                         % need to get stim from a file/directory
@@ -1096,7 +1086,7 @@ end
                     if strcmpi(col_name, 'trial')
                         % Place the proper value for 'stimuli' (e.g.,
                         % specific filepath replaces folder path)
-                        new_struct(len+1).('Stimuli') = stim_paths{row}{t}; %#ok<AGROW>
+                        new_struct(len+1).('Stim') = stim_paths{row}{t}; %#ok<AGROW>
                     end
                 end   % each row in new table
                 
