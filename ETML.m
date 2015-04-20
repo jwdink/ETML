@@ -60,11 +60,13 @@ try
     end
     
     % Prompt for information about this session
-    if isempty(session_info) && ~session.debug_mode
-        % no session info was added on call, ask for the basics:
-        session.experimenter = input('Enter your (experimenter) initials: ','s');
-        session.subject_code = input('Enter subject code: ', 's');
-        session.condition = str2double( input('Enter condition: ', 's') );
+    if isempty(session_info)
+        if ~session.debug_mode
+            % no session info was added on call, ask for the basics:
+            session.experimenter = input('Enter your (experimenter) initials: ','s');
+            session.subject_code = input('Enter subject code: ', 's');
+            session.condition = str2double( input('Enter condition: ', 's') );
+        end
     else 
         % custom session info was added on call
         sinfo_fnames = fieldnames(session_info);
@@ -77,7 +79,7 @@ try
         end   
     end
     
-    % Find out which phases will be recording (needed before calling log_msg):
+    % Find out which phases will be recording:
     session.record_phases = eval(get_config('RecordingPhases', 'error'));
     
     % Make trial-data folder:
@@ -96,8 +98,12 @@ try
     log_msg(sprintf('Set base dir: %s', session.base_dir));
     log_msg(sprintf('Study name: %s',get_config('StudyName', 'error')));
     log_msg(sprintf('Random seed set as %s via "twister"',num2str(session.random_seed)));
-    for this_field = fieldnames(session)
-        log_msg([this_field ' : ' num2str(session.(this_field))] );
+    sfnames = fieldnames(session);
+    for i = 1:length(sfnames)
+        this_field = sfnames{i};
+        if (ischar(session.(this_field)) || isnumeric(session.(this_field)))
+            log_msg([this_field ' : ' num2str(session.(this_field))] );
+        end
     end
     
     % Initiate data structure for session file
@@ -123,7 +129,7 @@ try
     % Note that this has scope that spans multiple functions, but it's not
     % global. This is to improve performance, but it means this GL var can't 
     % be used in other functions not in this script.
-    GL = struct(); 
+     GL = struct(); 
     InitializeMatlabOpenGL([],[],1); 
     
     if session.debug_mode
@@ -251,10 +257,11 @@ try
     log_msg('Experimenter has begun experiment.');
 
     % Main loop:
-    phases = unique( [stim_config_full.('Phase')] );
+    phases = unique( [stim_config_full.('PhaseNum')] );
     this_phase = 0;
     while this_phase < length(phases)
         this_phase = this_phase + 1;
+        session.this_phase = this_phase;
         
         % On Each Phase:
         this_phase_rows = get_rows(stim_config_full, session.condition, this_phase);
@@ -263,7 +270,7 @@ try
         et_calibrate(wind, this_phase)
         
         % Run Blocks:
-        blocks = unique( [stim_config_full(this_phase_rows).('Block')] );
+        blocks = unique( [stim_config_full(this_phase_rows).('BlockNum')] );
         
         % Shuffle block order?:
         if stim_config_full(this_block_rows(1)).('BlockShuffle')
@@ -290,7 +297,7 @@ try
             end
             
             % Run Trials:
-            trials = unique( [stim_config_full(this_block_rows).('Trial')] );
+            trials = unique( [stim_config_full(this_block_rows).('TrialNum')] );
             
             % Shuffle trial order?:
             if get_stim_config(this_block_rows(1), 'TrialShuffle')
@@ -442,25 +449,17 @@ end
 %% FXN_start_trial
     function start_trial(wind, trial_index, block_index, trial_config)
         
-        if session.record_phases(trial_config.('Phase'));
-            % ET is recording:
-            phase = trial_config.('Phase');
-            
-            % Start recording eye position:
+        if session.record_phases(trial_config.('PhaseNum'));
             Eyelink('StartRecording');
             log_msg(...
-                ['START_RECORDING_PHASE_', num2str(trial_config.('Phase')),...
+                ['START_RECORDING_PHASE_', num2str(trial_config.('PhaseNum')),...
                 '_BLOCK_',                 num2str(block_index),...
-                '_TRIAL_',                 num2str(trial_index)], ...
-                phase);
-        else
-            % ET is not recording:
-            phase = [];
+                '_TRIAL_',                 num2str(trial_index)]);
         end
 
-        % Send variables to EDF (if recording), session txt, and log txt:
-        add_data('trial', trial_index, phase);
-        add_data('block', block_index, phase);
+        % 
+        add_data('trial', trial_index);
+        add_data('block', block_index);
         other_fields1 = {'Condition', 'PhaseNum', 'Stim', 'StimType', 'FlipX', 'FlipY'};
         other_fields2 = eval_field( get_config('CustomFields') );
         other_fields = [other_fields1 other_fields2];
@@ -469,7 +468,7 @@ end
         for f = 1:length(other_fields)
             field = other_fields{f};
             if isfield(trial_config,field)
-                add_data(field, trial_config.(field), phase);
+                add_data(field, trial_config.(field));
             end
         end
         
@@ -491,15 +490,13 @@ end
         % %
         
         % End trial
-        if session.record_phases(trial_config.('Phase'));
+        if session.record_phases(trial_config.('PhaseNum'));
             % ET was recording:
             log_msg(...
-                ['STOP_RECORDING_PHASE_',  num2str(trial_config.('Phase')),...
+                ['STOP_RECORDING_PHASE_',  num2str(trial_config.('PhaseNum')),...
                 '_BLOCK_',                 num2str(block_index),...
-                '_TRIAL_',                 num2str(trial_index)], ...
-                trial_config.('Phase') );
+                '_TRIAL_',                 num2str(trial_index)] );
             log_msg('StopRecording');
-            Eyelink('StopRecording');
             WaitSecs(.01);
             Screen('Close');
             Eyelink('Message', 'TRIAL_RESULT 0');
@@ -514,22 +511,21 @@ end
 %% FXN_save_img_for_dv
     function save_img_for_dv (trial_index, trial_config, tex)
 
-        if session.record_phases(trial_config.('Phase'))
+        if session.record_phases(trial_config.('PhaseNum'))
             
             if nargin < 3
                 imgpath = trial_config.('Stim');
             else
                 image_array = Screen('GetImage', tex ); 
                 imgname = ['img' ...
-                    '_phase_' num2str(trial_config.('Phase')) ...
-                    '_block_' num2str(trial_config.('Block')) ...
+                    '_phase_' num2str(trial_config.('PhaseNum')) ...
+                    '_block_' num2str(trial_config.('BlockNum')) ...
                     '_trial_' num2str(trial_index) '.jpg' ];
                 imgpath = ['data/', session.subject_code, '/' imgname];
                 imwrite(image_array, imgpath);
             end
             
-            log_msg(sprintf('!V IMGLOAD CENTER %s %d %d', imgpath, session.swidth/2, session.sheight/2), ...
-                trial_config.('Phase')); % send to ET
+            log_msg(sprintf('!V IMGLOAD CENTER %s %d %d', imgpath, session.swidth/2, session.sheight/2)); % send to ET
             
         end
     end
@@ -556,9 +552,9 @@ end
         text_start = GetSecs();
         
         % Wait For KeyPress:
-        keycode = check_keypress([], trial_config.('Phase'));
+        keycode = check_keypress([]);
         while 1
-            keycode = check_keypress(keycode, trial_config.('Phase'));
+            keycode = check_keypress(keycode);
             
             if GetSecs() - text_start >= duration
                 break % end 
@@ -617,12 +613,12 @@ end
         WaitSecs(.10);
         Screen('SetMovieTimeIndex', movie, 0);
 
-        log_msg( sprintf('Playing Video: %s', trial_config.('Stim')), trial_config.('Phase') );
+        log_msg( sprintf('Playing Video: %s', trial_config.('Stim')) );
         vid_start = GetSecs();
         
-        keycode = check_keypress([], trial_config.('Phase'));
+        keycode = check_keypress([]);
         while 1
-            keycode = check_keypress(keycode, trial_config.('Phase'));
+            keycode = check_keypress(keycode);
             
             if GetSecs() - vid_start >= duration
                 break % end movie
@@ -648,13 +644,13 @@ end
         
         % Close Movie(s):
         dropped_frames = Screen('PlayMovie',  movie, 0);
-        log_msg( sprintf('Dropped frames: %d', dropped_frames) ,trial_config.('Phase'));
+        log_msg( sprintf('Dropped frames: %d', dropped_frames) );
         Screen('CloseMovie', movie);
         Screen('Flip', wind);
-        log_msg('Video is over.', trial_config.('Phase'));
+        log_msg('Video is over.');
         
         Screen('Flip', wind);
-        check_keypress(keycode, trial_config.('Phase'), 'flush'); % flush currently pressed keys
+        check_keypress(keycode, 'flush'); % flush currently pressed keys
         
         new_trial_index = trial_index + 1;
         WaitSecs(.1);
@@ -702,11 +698,11 @@ end
         save_img_for_dv(trial_index, trial_config);
         
         while KbCheck; end; % if keypress from prev slide is still happening, we wait til its over
-        log_msg( sprintf('Displaying Image: %s', stim_path) , trial_config.('Phase'));
+        log_msg( sprintf('Displaying Image: %s', stim_path) );
         image_start = GetSecs();
         Screen('Flip', wind);
         
-        keycode = check_keypress([], trial_config.('Phase'));
+        keycode = check_keypress([]);
         close_image = 0;
         
         while ~close_image
@@ -721,7 +717,7 @@ end
                 end
             end
             
-            keycode = check_keypress(keycode, trial_config.('Phase'));
+            keycode = check_keypress(keycode);
             
             if slideshow
                 % if it's a slideshow, then they can sift thru the slides
@@ -746,7 +742,7 @@ end
             
         end
         
-        check_keypress(keycode, trial_config.('Phase'), 'flush'); % flush currently pressed keys
+        check_keypress(keycode, 'flush'); % flush currently pressed keys
         
         
         %
@@ -820,10 +816,10 @@ end
         % Draw the texture:
         if save_stim_info
             % Record the stimulus dimensions to the data file:
-            add_data('StimDimY', theight, trial_config.('Phase') );
-            add_data('StimDimX', twidth,  trial_config.('Phase') );
-            add_data('StimCenterX', center_x, trial_config.('Phase') );
-            add_data('StimCenterY', center_y, trial_config.('Phase') );
+            add_data('StimDimY', theight );
+            add_data('StimDimX', twidth );
+            add_data('StimCenterX', center_x );
+            add_data('StimCenterY', center_y );
             
             if strcmpi( trial_config.('StimType') , 'video' )
                 % Draw an example image for the background of a dataviewer
@@ -851,11 +847,11 @@ end
         cond_logical  = ([config_struct.Condition] == condition);
         
         if nargin > 2
-            phase_logical = ([config_struct.Phase] == this_phase) & cond_logical;
+            phase_logical = ([config_struct.PhaseNum] == this_phase) & cond_logical;
             if nargin > 3
-                block_logical = ([config_struct.Block] == this_block) & phase_logical;
+                block_logical = ([config_struct.BlockNum] == this_block) & phase_logical;
                 if nargin > 4
-                    trial_logical = ([config_struct.Trial] == this_trial) & block_logical;
+                    trial_logical = ([config_struct.TrialNum] == this_trial) & block_logical;
                     % if phase and block and trial were all input, return
                     % rows for trial within block within phase:
                     rows = find( trial_logical );

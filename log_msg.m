@@ -1,5 +1,8 @@
 %% FXN_log_msg
-function log_msg (msg, this_phase)
+function log_msg (msg)
+
+% This function is not optimized for speed, since it depends on global variables
+% Consider changing this in the future?
 global session
 
 if ~ischar(msg)
@@ -9,17 +12,10 @@ end
 
 fprintf('\n# %s\n', msg);
 
-if nargin < 2
-    % if this_phase is not given, then message will not be sent to
-    % eyetracker
-    this_phase = [];
-end
-
 % remove any quotes in value that will screw up log file:
 % (think about removing this if speed is big priority)
 msg = strrep(msg, char(39), '');
 msg = strrep(msg, char(34), '');
-
 
 session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'a');
 
@@ -30,8 +26,11 @@ timestamp = [num2str(year) '-' num2str(month) '-' num2str(day) ...
 fprintf(session.fileID,'%s \t%s\n',timestamp,msg);
 fclose(session.fileID);
 
-if session.record_phases(this_phase)
-    Eyelink('Message',msg);
+if is_in_cellarray('this_phase', fieldnames(session))
+    if session.record_phases(session.this_phase)
+        Eyelink('Message',msg);
+    end
 end
+
 
 end

@@ -1,13 +1,13 @@
 %% FXN_check_keypress
-function [keycode] = check_keypress (last_keycode, this_phase, trialend)
+function [keycode] = check_keypress (last_keycode, trialend)
+
+% This function is not optimized for speed, since it depends on log_msg
+% Consider changing this in the future?
 
 if nargin < 1 || isempty(last_keycode)
     last_keycode = zeros(1,256);
 end
 if nargin < 2
-    this_phase = [];
-end
-if nargin < 3
     trialend = 0;
 end
 
@@ -27,11 +27,11 @@ pressed_keys  = find(keycode_diff > 0);
 
 for i = 1:length(released_keys)
     released_key_name = KbName(released_keys(i));
-    log_msg(sprintf( 'Key released: %s', released_key_name ), this_phase)
+    log_msg(sprintf( 'Key released: %s', released_key_name ) )
 end
 for i = 1:length(pressed_keys)
     pressed_key_name = KbName(pressed_keys(i));
-    log_msg(sprintf( 'Key pressed: %s', pressed_key_name ), this_phase)
+    log_msg(sprintf( 'Key pressed: %s', pressed_key_name ) )
 end
 
 % check for escape:
@@ -40,7 +40,7 @@ if length(pressed_keys) == 1
         WaitSecs(.5);
         [~,~,keycode] = KbCheck();
         if strcmpi(KbName(keycode),'Escape')
-            log_msg('Aborting experiment due to ESCAPE key press.', this_phase);
+            log_msg('Aborting experiment due to ESCAPE key press.');
             post_experiment(true);
         end
     end
