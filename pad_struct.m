@@ -11,11 +11,9 @@ struct = pad_col('PhaseNum'  ,struct);
 struct = pad_col('BlockNum'  ,struct);
 struct = pad_trial_col(struct);
 
-WriteStructsToText('./foo.txt', struct);
-
 %% Helper functions:
 
-%% Make a Column 
+%% Make a Column
 % (not a trial column, though)
     function [new_struct] = pad_col (col_name, config_struct)
         
@@ -57,7 +55,7 @@ WriteStructsToText('./foo.txt', struct);
         column     = cellfun(@num2str, { config_struct.('TrialNum') }, 'UniformOutput', 0);
         col_len    = length(column);
         
-        % For each column entry
+        % For each row
         for row = 1:col_len
             
             % How many stimuli are there? What are their paths?
@@ -70,7 +68,7 @@ WriteStructsToText('./foo.txt', struct);
             num_stim = length(stim_paths);
             
             % How many Before/After Messages are there?
-            [before_stim_msgs, after_stim_msgs, num_msgs] = get_before_after_msgs(config_struct);
+            [before_stim_msgs, after_stim_msgs, num_msgs] = get_before_after_msgs(config_struct, row);
             
             % How many trials are there?
             % check the entered value (e.g., '1:36'), expand it into a full vector:
@@ -83,7 +81,7 @@ WriteStructsToText('./foo.txt', struct);
             % For each row in the unexpanded struct:
             for t = 1:length(expanded_elem)
                 
-                % Get struct length/existence:
+                % Get new struct length/existence:
                 if exist('new_struct','var')
                     len = length(new_struct);
                 else
@@ -115,17 +113,18 @@ WriteStructsToText('./foo.txt', struct);
     function [stim_order] = select_draw_method(config_struct, row, num_stim, num_msgs, expanded_elem)
         
         draw_meth = get_trial_config(config_struct(row), 'StimDrawFromFolderMethod');
-        if num_stim < 2 && ~isempty(draw_meth)
+        if num_stim < 2 && ~isempty(draw_meth) && ~strcmpi(draw_meth, 'asc')
             msg = ['You have selected a "StimDrawFromFolderMethod" for a trial, but the ' ...
                 'stim for that trial is not a folder. Ignoring.'];
             warning(msg); %#ok<WNTAG>
             log_msg(msg);
+            draw_meth = 'asc';
         end
         switch lower(draw_meth)
             case 'asc'
-                stim_order = 1:length(expanded_elem);
+                stim_order = repv(1:(num_stim*num_msgs), length(expanded_elem) );
             case 'desc'
-                stim_order = 1:length(expanded_elem);
+                stim_order = repv(1:(num_stim*num_msgs), length(expanded_elem) );
                 stim_order = stim_order(end:-1:1); % reverse!
             case 'sample'
                 stim_order = randsample_stim_order(num_msgs, num_stim, length(expanded_elem), 0 );
@@ -139,37 +138,56 @@ WriteStructsToText('./foo.txt', struct);
         
     end
 
+% Repeat vector:
+    function [out] = repv(vec, length_out)
+        repvec = repmat(vec, 1, ceil(length_out/length(vec)));
+        out = repvec(1:length_out);
+    end
+
 % Randomly Sample Stimuli Ordering:
     function [stim_order] = randsample_stim_order(num_msgs, num_stim, num_trials, consec_allowed)
+        if num_trials > num_stim
+            if mod(num_trials, (num_stim*num_msgs)) ~= 0 % num trials / num_stim is whole num
+                msg = ['If randomly sampling without replacement, and number of trials is greater than ' ...
+                'number of stimuli, then number of trials must be an even multiple of number ' ...
+                'of stimuli. However, on one of your trials, you have ' num2str(num_stim*num_msgs) ...
+                ' stimuli, and ' num2str(num_trials) ' trials.'];
+            error(msg);
+            end
+        end
         
-        if num_trials <= (num_stim*num_msgs)
-            stim_order = randsample(num_msgs*num_stim, num_trials);
+        if num_stim*num_msgs < 3 && ~consec_allowed
+            % if only 2 stim to choose from, this problem reduces (and else method below ineffecient)
+            stim_order = repmat(randsample(2,2), num_trials, 1);
         else
-            if mod(num_trials, (num_stim*num_msgs))
-                while ~consec_allowed % if consec allowed, this just runs once
-                    stim_order = randsample_w_bigger(num_msgs*num_stim, num_trials);
-                    [~, stim_ind] = ind2sub([num_msgs num_stim], stim_order);
-                    if all( diff( stim_ind ) )
-                        return
-                    end
+            stim_order = randsample_with_bigger(num_msgs*num_stim, num_trials);
+            while ~consec_allowed % if consec allowed, this doesn't run, we just accept stim_order
+                [~, stim_ind] = ind2sub([num_msgs num_stim], stim_order);
+                if all( diff( stim_ind ) )
+                    return
                 end
-            else
-                msg = ['If randomly sampling without replacement, and number of trials is greater than' ...
-                    'number of stimuli, then number of trials must be an even multiple of number' ...
-                    'of stimuli. However, on one of your trials, you have ' num2str(num_stim*num_msgs) ...
-                    ' stimuli, and ' num2str(num_trials) ' trials.'];
-                error(msg);
+                stim_order = randsample_with_bigger(num_msgs*num_stim, num_trials);
             end
             
         end
         
     end
 
-    % Get Before-Stim / After-Stim Message Text:
-    function [before_stim_msgs after_stim_msgs, num_msgs] = get_before_after_msgs(config_struct)
+% Randsample where k is bigger than n:
+    function [y] = randsample_with_bigger(n,k)
+        if k > n
+            population = repmat(1:n, 1, k/n);
+        else
+            population = 1:n;
+        end
+        y = randsample(population, k);
+    end
+
+% Get Before-Stim / After-Stim Message Text:
+    function [before_stim_msgs after_stim_msgs, num_msgs] = get_before_after_msgs(config_struct, row)
         
         before_stim_field = get_trial_config(config_struct(row), 'BeforeStimText');
-        after_stim_field = get_trial_config(config_struct(row), 'AfterStimText');
+        after_stim_field  = get_trial_config(config_struct(row), 'AfterStimText');
         
         all_msgs = {eval_field(before_stim_field) eval_field(after_stim_field)};
         msg_empty = cellfun('isempty', all_msgs);
@@ -178,7 +196,8 @@ WriteStructsToText('./foo.txt', struct);
             % not all are empty?
             if any(msg_empty)
                 % one of them is?
-                % make empty one into cell array with length of nonempty, fill with blank msgs that'll be ignored in stim presentation
+                % make empty one into cell array with length of nonempty, 
+                % fill with blank msgs that'll be ignored in stim presentation
                 all_msgs{msg_empty} = cell( 1, length(all_msgs{~msg_empty}) );
                 
             else
@@ -193,6 +212,8 @@ WriteStructsToText('./foo.txt', struct);
                     error('See above.');
                 end
             end
+        else 
+            all_msgs = {{''} {''}};
         end
         
         before_stim_msgs = all_msgs{1};
