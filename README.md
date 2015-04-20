@@ -31,7 +31,15 @@ You need to completely customize what happens on each trial, but you want easy m
 
 # Guide
 
-First, download this git. The easiest way to get going is simply to copy and paste the "Example" folder, renaming it to your experiment's name.
+### Requirements
+
+- MATLAB
+- [Psych Toolbox](psychtoolbox.com)
+- GStreamer (for playing videos; see Psych Toolbox website for instructions)
+
+### Getting Started
+
+To get started, download this git. The easiest way to get going is simply to copy and paste the "Example" folder, renaming it to your experiment's name.
 
 ## Getting Set-Up : Config.txt
 
@@ -72,7 +80,7 @@ There are several stimuli types supported:
 ETML knows how to interpret any of the following optional columns (for images and videos):
 
 * **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
-* **StimCenterX, StimCenterY** : What position on the screen do you want the stim to be? (E.g., 400,400 puts the center of the 400 pixels below the top of the screen, and 400 pixels rightwards of the left-side of the screen). Default is centered.
+* **StimCenterX, StimCenterY** : What position on the screen do you want the stim to be? (E.g., `400,400` puts the center of the 400 pixels below the top of the screen, and 400 pixels rightwards of the left-side of the screen). Default is centered.
 * **FlipX, FlipY** : Mirror the stim? Default no.
 
 
@@ -82,7 +90,7 @@ Trials have a duration, which can be specified (*in units of seconds*) with the 
 
 A single number entered here will specify the minimum and maximum duration of this stimulus (i.e., time to keep stim up, regardless of keypress). 
 
-If you enter two numbers (separated by a comma), the first will be used as the minimum duration (i.e., stays up at least this long, regardless of keypress), the second will be used as the maximum duration (i.e., ends by this time even if no keypress registered).
+If you enter two numbers in brackets (i.e., valid MATLAB syntax-- e.g., `[1,3]`), the first will be used as the minimum duration (i.e., stays up at least this long, regardless of keypress), the second will be used as the maximum duration (i.e., ends by this time even if no keypress registered).
 
 For 'default' behavior, leave blank or enter 0. 'Default' behavior is different for images and videos. For images, default means keep on screen indefinitely until keypress; for videos, default means keep on screen until end of video (and keypress will not terminate video early).
 

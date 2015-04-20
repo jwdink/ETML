@@ -143,7 +143,7 @@ try
     end
     
     hc = get_config('HideCursor', 1);
-    if hc
+    if hc && ~session.debug_mode % nohide for debug
         HideCursor();
     end
     
@@ -201,24 +201,22 @@ try
         % This is where the eyetracker is set to dummy-mode, if that option was
         % selected
         DrawFormattedText(wind, ['If you''re seeing this for a while, ET might'...
-            ' not be connected. Press anykey to quit.'], 'center', 'center');
+            ' not be connected. Press enter to continue.'], 'center', 'center');
         Screen('Flip', wind);
         
         if ~EyelinkInit(get_config('DummyMode'), 1)
-            log_msg(sprintf('Eyelink Init aborted.\n'));
-            post_experiment(true);
+            error(sprintf('Eyelink Init failed.\n')); %#ok<SPERR>
         end
         
         [~, vs] = Eyelink('GetTrackerVersion');
-        log_msg(sprintf('Running experiment on a ''%s'' tracker.\n', vs ));
+        log_msg(sprintf('Running experiment on a ''%d'' tracker.\n', vs ));
         
         % Set-up edf file
         session.edf_file = [session.subject_code '.edf'];
         edfERR  = Eyelink('Openfile', session.edf_file);
         
         if edfERR~=0
-            log_msg(sprintf('Cannot create EDF file ''%s'' ', session.edf_file));
-            post_experiment(true);
+            error(sprintf('Cannot create EDF file ''%s'' ', session.edf_file)); %#ok<SPERR>
         end
         
         % Send some commands to eyetracker to set up event parsing:
@@ -243,6 +241,7 @@ try
         
         DrawFormattedText(wind, 'Unable to connect to Eyelink system. Press any key to continue', 'center', 'center');
         Screen('Flip', wind);
+        while KbCheck; end;
         KbWait;
         
     end
@@ -251,7 +250,7 @@ try
     
     % Wait to begin experiment:
     Screen('TextSize', wind, 25);
-    DrawFormattedText(wind, 'Press any key to begin!', 'center', 'center');
+    DrawFormattedText(wind, 'Press any key to begin.', 'center', 'center');
     Screen('Flip', wind);
      KbWait([], 2);
     log_msg('Experimenter has begun experiment.');
@@ -273,7 +272,7 @@ try
         blocks = unique( [stim_config_full(this_phase_rows).('BlockNum')] );
         
         % Shuffle block order?:
-        if stim_config_full(this_block_rows(1)).('BlockShuffle')
+        if get_trial_config(stim_config_full(this_phase_rows(1)), 'BlockShuffle')
             log_msg('Shuffling blocks in this phase');
             bidx = randperm(length(trials));
             blocks = blocks(bidx);
@@ -284,8 +283,8 @@ try
             % Get BlockNum:
             % block index is order of presentation
             % this_block is original block numbering from stim config
-            this_block = blocks(block_index); % this gets logged, but not sent to ET or session
             block_index = block_index + 1; % this gets sent everywhere
+            this_block = blocks(block_index); % this gets logged, but not sent to ET or session
             
             % On Each Block:
             this_block_rows = get_rows(stim_config_full, session.condition, this_phase, this_block);
@@ -300,11 +299,12 @@ try
             trials = unique( [stim_config_full(this_block_rows).('TrialNum')] );
             
             % Shuffle trial order?:
-            if get_stim_config(this_block_rows(1), 'TrialShuffle')
+            if get_trial_config(stim_config_full(this_block_rows(1)), 'TrialShuffle')
                 trials = shuffle_trials(trials, this_block_rows); 
             end
             
             new_trial_index = 1;
+            trial_index = 1;
             while trial_index < length(trials)
                 % Update Trial Index:
                 trial_index = new_trial_index; % this gets sent to ET data, session file, and log
@@ -318,11 +318,10 @@ try
                 % Trial Index is order of presentation
                 % this_trial is original numbering from stim config
                 this_trial = trials(trial_index); % this gets logged, but not sent to ET or session
-                log_msg( sprintf('Trial Index : %d', trial_index) ); 
                 
                 % On Each Trial:
                 this_trial_row = get_rows(stim_config_full, session.condition, this_phase, this_block, this_trial);
-                check_trial(this_trial_row)
+                check_trial(this_trial_row, trial_record_path)
                 
                 %%% Run Trial:
                 start_trial(wind, trial_index, block_index, stim_config_full(this_trial_row));
@@ -458,8 +457,8 @@ end
         end
 
         % 
-        add_data('trial', trial_index);
-        add_data('block', block_index);
+        add_data('TrialNum', trial_index);
+        add_data('BlockNum', block_index);
         other_fields1 = {'Condition', 'PhaseNum', 'Stim', 'StimType', 'FlipX', 'FlipY'};
         other_fields2 = eval_field( get_config('CustomFields') );
         other_fields = [other_fields1 other_fields2];
@@ -473,6 +472,7 @@ end
         end
         
         % Show Before Message:
+        while KbCheck; end;
         show_text(wind, trial_config, 'Before')
         
     end
@@ -481,12 +481,13 @@ end
     function stop_trial(wind, trial_index, block_index, trial_config)
         
         % Show After Message:
-        show_text(wind, trial_config, 'Before')
+        while KbCheck; end;
+        show_text(wind, trial_config, 'After')
         
         % % TO DO!
         %
         % Save Keypress Data
-        %
+        %T
         % %
         
         % End trial
@@ -658,7 +659,7 @@ end
         %
         function [duration, min_duration] = set_duration(trial_config, mov_dur)
             
-            dur_field = get_trial_config(trial_config, 'Duration');
+            dur_field = get_trial_config(trial_config, 'StimDuration');
             dur_config = eval_field(dur_field);
             
             if length(dur_config) > 1 % they specified min and max
@@ -748,7 +749,7 @@ end
         %
         function [duration, min_duration] = set_duration(trial_config)
             
-            dur_field = get_trial_config(trial_config, 'Duration');
+            dur_field = get_trial_config(trial_config, 'StimDuration');
             dur_config = eval_field(dur_field);
             
             if length(dur_config) > 1 % they specified min and max
@@ -783,8 +784,8 @@ end
         % Get Flip Config:
         flipx = get_trial_config(trial_config, 'FlipX');
         flipy = get_trial_config(trial_config, 'FlipY');
-        if flipx; x = 1; else x = -1; end;
-        if flipy; y = 1; else y = -1; end
+        if flipx; x = -1; else x = 1; end;
+        if flipy; y = -1; else y = 1; end
         
         % Texture Dimensions:
         tex_rect = Screen('Rect', tex);

@@ -14,6 +14,9 @@ if nargin > 2
     out = default;
 else
     switch field
+        case {'BlockShuffle', 'TrialShuffle'}
+            out = 0;
+        
         case 'StimDrawFromFolderMethod'
             out = 'asc';
             
@@ -24,7 +27,7 @@ else
             out = '';
             
         otherwise
-            error(['Column ' field ' not found in stim_config.txt'])
+            error(['Column ' field ' not found in stim_config.txt. ETML does not know a default for this column.'])
             
     end
 end

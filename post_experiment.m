@@ -52,7 +52,7 @@ end_time = ...
     [num2str(year) '-' num2str(month) '-' num2str(day) ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
 
 for this_field = fieldnames(session)
-    if ~is_in_cell(this_field, {'data', 'skip_comments'})
+    if ~is_in_cellarray(this_field, {'data', 'skip_comments'})
         results(length(results) + 1).key = this_field;
         results(length(results)).value   = session.(this_field);
     end
