@@ -115,6 +115,8 @@ try
     session.next_key = 'RightArrow';
     session.prev_key = 'LeftArrow';
     
+     session.keys_of_interest = eval_field( get_config('KeysOfInterest') );
+    
     % Wait for experimenter to press Enter to begin
     disp(upper(sprintf('\n\n********Press any key to launch the experiment window********\n\n')));
     if ~session.debug_mode
@@ -324,22 +326,22 @@ try
                 check_trial(this_trial_row, trial_record_path)
                 
                 %%% Run Trial:
-                start_trial(wind, trial_index, block_index, stim_config_full(this_trial_row));
+                start_trial(trial_index, block_index, stim_config_full(this_trial_row));
                 
                 if ~exist('out_struct', 'var')
                     out_struct = struct();
                 end
                 
-                [new_trial_index, out_struct] =...
+                [new_trial_index, out_struct, key_summary] =...
                     show_stimuli(wind, trial_index , stim_config_full(this_trial_row), out_struct, GL);
                 
-                stop_trial(wind, trial_index, block_index, stim_config_full(this_trial_row));
+                stop_trial(trial_index, block_index, stim_config_full(this_trial_row), key_summary);
                 %%%
             end
         end
     end
     
-    post_experiment(0);
+    post_experiment(0); % end experiment
     
     
 catch exp_err
@@ -349,7 +351,7 @@ catch exp_err
     
     sca;
     
-    if ~strcmpi('Experiment Ended.' , exp_err.message)
+    if ~strcmpi('Experiment Ended.' , exp_err.message) && ~session.debug_mode
         h= msgbox({'Experiment has encountered an error and shut down.'...
             ['MSG: ' exp_err.message] ['LINE:' num2str([exp_err.stack.line])] ...
             'Press OK to save results so far, and save err msg to log.' ...
@@ -365,11 +367,10 @@ catch exp_err
 end
 
 %% FXN_shuffle_trials
-
     function trials = shuffle_trials(trials, this_block_rows)
         
         draw_meth = get_stim_config(this_block_rows(1), 'StimDrawFromFolderMethod');
-        if strcmpi(draw_meth, 'sample_noconsec')
+        if strcmpi(draw_meth, 'sample')
             shufmsg = ['You''ve selected incompatible options: trial shuffling'...
                 ' and non-consecutive stimuli sampling. Ignoring the former.'];
             warning(shufmsg); %#ok<WNTAG>
@@ -416,37 +417,53 @@ end
     end
 
 %% FXN_show_stimuli
-    function [new_trial_index, out_struct] = show_stimuli (wind, trial_index, trial_config, out_struct, GL)
+    function [new_trial_index, out_struct, key_summary] = show_stimuli (wind, trial_index, trial_config, out_struct, GL)
         
+        % Show Before Message:
+        while KbCheck; end;
+        show_text(wind, trial_config, 'Before');
+        
+        % Summarize Keypresses?
+        if isempty( session.keys_of_interest )
+            key_summary = [];
+        else
+            key_summary = struct();
+        end
+        
+        % Show Stim:
         stim_type = lower( get_trial_config(trial_config, 'StimType') );
         
         if any( is_in_cellarray( stim_type , {'image', 'img', 'slideshow'} ) )
             
-            % Image:
-            new_trial_index = ...
-                show_img(wind, trial_index, trial_config, GL);
+            % Image: 
+            [new_trial_index, key_summary] = ...
+                show_img(wind, trial_index, trial_config, GL, key_summary);
             
         elseif is_in_cellarray( stim_type , {'vid', 'video'} )
             
-            % Video:
-            new_trial_index = ...
-                show_vid(wind, trial_index, trial_config, GL);
+            % Video: 
+            [new_trial_index, key_summary] = ...
+                show_vid(wind, trial_index, trial_config, GL, key_summary);
             
         elseif strcmp(stim_type, 'custom')
             
-            % Custom Script:
+            % Custom Script: 
             [new_trial_index, out_struct] =...
-                custom_function(wind, trial_index, trial_config, out_struct); 
+                custom_function(wind, trial_index, trial_config, out_struct);
             
         else
-            errmsg = ['StimType "' trial_config.('StimType') '" is unsupported.'];
+            errmsg = ['StimType "' stim_type '" is unsupported.'];
             error(errmsg);
         end
+        
+        % Show After Message: 
+        while KbCheck; end;
+        key_summary = show_text(wind, trial_config, 'After', key_summary);
         
     end
 
 %% FXN_start_trial
-    function start_trial(wind, trial_index, block_index, trial_config)
+    function start_trial(trial_index, block_index, trial_config)
         
         if session.record_phases(trial_config.('PhaseNum'));
             Eyelink('StartRecording');
@@ -470,25 +487,28 @@ end
                 add_data(field, trial_config.(field));
             end
         end
-        
-        % Show Before Message:
-        while KbCheck; end;
-        show_text(wind, trial_config, 'Before')
-        
+
     end
 
 %% FXN_stop_trial
-    function stop_trial(wind, trial_index, block_index, trial_config)
-        
-        % Show After Message:
-        while KbCheck; end;
-        show_text(wind, trial_config, 'After')
-        
-        % % TO DO!
-        %
+    function stop_trial(trial_index, block_index, trial_config, key_summary)
+       
         % Save Keypress Data
-        %T
-        % %
+        if ~isempty(key_summary)
+            ks_fnames = fieldnames(key_summary);
+            for f = 1:length(ks_fnames)
+                field = ks_fnames{f};
+                this_key_summary = key_summary.(field);
+                
+                % Count, CumuTime:
+                add_data(['Key_' upper(field) '_PressCount'], num2str(this_key_summary{1}) );
+                add_data(['Key_' upper(field) '_CumuPress'], num2str(this_key_summary{2})  );
+                
+                % First Press:
+                add_data(['Key_' upper(field) '_FirstPressTimestamp'], time_to_timestamp(this_key_summary{3}) );
+                add_data(['Key_' upper(field) '_LastPressTimestamp'], time_to_timestamp(this_key_summary{4}) );
+            end
+        end
         
         % End trial
         if session.record_phases(trial_config.('PhaseNum'));
@@ -532,11 +552,15 @@ end
     end
 
 %% FXN_show_text
-    function show_text(wind, trial_config, before_or_after)
+    function key_summary = show_text(wind, trial_config, before_or_after, key_summary)
+        
+        if nargin < 4
+            key_summary = [];
+        end
         
         while KbCheck; end;
         
-        before_or_after(1) = upper( before_or_after(1) );
+        before_or_after(1) = upper( before_or_after(1) ); % camelcase
         
         % What text to display?
         the_text = trial_config.([before_or_after 'StimText']);
@@ -553,20 +577,24 @@ end
         text_start = GetSecs();
         
         % Wait For KeyPress:
-        keycode = check_keypress([]);
+        key_code = check_keypress();
         while 1
-            keycode = check_keypress(keycode);
+            [key_code, key_summary] = check_keypress(key_code, key_summary);
             
             if GetSecs() - text_start >= duration
                 break % end 
             end
             
-            if any(keycode)
+            if any(key_code)
                 if GetSecs() - text_start >= min_duration
-                  break % end 
+                    break % end
                 end
             end
         end
+        
+        [~, key_summary] = check_keypress(key_code, key_summary, 'flush');
+        
+        return
         
         %
         function [duration, min_duration] = set_duration(trial_config, before_or_after)
@@ -592,7 +620,11 @@ end
     end
 
 %% FXN_show_vid
-    function [new_trial_index] = show_vid(wind, trial_index, trial_config, GL)
+    function [new_trial_index, key_summary] = show_vid(wind, trial_index, trial_config, GL, key_summary)
+        
+        if nargin < 5
+            key_summary = [];
+        end
         
         % Open Movie(s):
         win_rect = session.win_rect; % so that repetitive loop doesn't have to access global var
@@ -615,17 +647,18 @@ end
         Screen('SetMovieTimeIndex', movie, 0);
 
         log_msg( sprintf('Playing Video: %s', trial_config.('Stim')) );
+        vid_start_clock = clock;
         vid_start = GetSecs();
         
-        keycode = check_keypress([]);
+        key_code = check_keypress();
         while 1
-            keycode = check_keypress(keycode);
+            [key_code,key_summary] = check_keypress(key_code, key_summary);
             
             if GetSecs() - vid_start >= duration
                 break % end movie
             end
             
-            if sum(keycode)
+            if any(key_code)
                 if GetSecs() - vid_start >= min_duration
                   break % end movie
                 end
@@ -650,11 +683,20 @@ end
         Screen('Flip', wind);
         log_msg('Video is over.');
         
-        Screen('Flip', wind);
-        check_keypress(keycode, 'flush'); % flush currently pressed keys
+        % Stop Time:
+        vid_stop_clock = clock;
+        vid_stop_clock_str = time_to_timestamp(vid_stop_clock);
+        add_data('StimStopTimestamp', vid_stop_clock_str);
         
+        % Start Time:
+        vid_start_clock_str = time_to_timestamp(vid_start_clock);
+        add_data('StimStartTimestamp', vid_start_clock_str);
+        
+        % KB:
+        [~, key_summary] = check_keypress(key_code, key_summary, 'flush'); % flush currently pressed keys
+        
+        Screen('Flip', wind);
         new_trial_index = trial_index + 1;
-        WaitSecs(.1);
 
         %
         function [duration, min_duration] = set_duration(trial_config, mov_dur)
@@ -680,7 +722,7 @@ end
     end
 
 %% FXN_show_img
-    function [new_trial_index] = show_img (wind, trial_index, trial_config, GL)
+    function [new_trial_index, key_summary] = show_img (wind, trial_index, trial_config, GL, key_summary)
         
         stim_path = trial_config.('Stim');
         win_rect = session.win_rect;
@@ -700,12 +742,12 @@ end
         
         while KbCheck; end; % if keypress from prev slide is still happening, we wait til its over
         log_msg( sprintf('Displaying Image: %s', stim_path) );
+        img_start_clock = clock;
         image_start = GetSecs();
         Screen('Flip', wind);
         
-        keycode = check_keypress([]);
         close_image = 0;
-        
+        key_code = check_keypress();
         while ~close_image
             
             if duration > 0
@@ -718,21 +760,21 @@ end
                 end
             end
             
-            keycode = check_keypress(keycode);
+            [key_code, key_summary] = check_keypress(key_code, key_summary);
             
             if slideshow
                 % if it's a slideshow, then they can sift thru the slides
-                if     strcmpi(KbName(keycode), session.next_key)
+                if     strcmpi(KbName(key_code), session.next_key)
                     close_image = 1;
                     new_trial_index = trial_index + 1;
-                elseif strcmpi(KbName(keycode), session.prev_key)
+                elseif strcmpi(KbName(key_code), session.prev_key)
                     close_image = 1;
                     new_trial_index = trial_index - 1;
                 end
             else
                 % if it's an image, advance on keypress, assuming it's been
                 % up for minimum amount of time
-                if sum(keycode)
+                if any(key_code)
                     if GetSecs() > (image_start + min_duration)
                         close_image = 1;
                         new_trial_index = trial_index + 1;
@@ -743,8 +785,17 @@ end
             
         end
         
-        check_keypress(keycode, 'flush'); % flush currently pressed keys
+        % Stop Time:
+        img_stop_clock = clock;
+        img_stop_clock_str = time_to_timestamp(img_stop_clock);
+        add_data('StimStopTimestamp', img_stop_clock_str);
         
+        % Start Time:
+        img_start_clock_str = time_to_timestamp(img_start_clock);
+        add_data('StimStartTimestamp', img_start_clock_str);
+        
+        % KB:
+        [~, key_summary] = check_keypress(key_code, key_summary, 'flush'); % flush currently pressed keys
         
         %
         function [duration, min_duration] = set_duration(trial_config)
