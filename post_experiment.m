@@ -51,8 +51,10 @@ results = struct('key',{},'value',{});
 end_time = ...
     [num2str(year) '-' num2str(month) '-' num2str(day) ' ' num2str(hour) ':' num2str(minute) ':' num2str(sec) ];
 
-for this_field = fieldnames(session)
-    if ~is_in_cellarray(this_field, {'data', 'skip_comments'})
+sfnames= fieldnames(session);
+for i = 1:length(sfnames)
+    this_field = sfnames{i};
+    if ~ strcmpi(this_field, {'data', 'config', 'fileID', 'skip_comments', 'this_phase', 'win_rect', 'keys_of_interest'})
         results(length(results) + 1).key = this_field;
         results(length(results)).value   = session.(this_field);
     end
