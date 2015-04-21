@@ -14,13 +14,10 @@ if nargin > 2
     out = default;
 else
     switch field
-        case {'BlockShuffle', 'TrialShuffle'}
-            out = 0;
-        
         case 'StimDrawFromFolderMethod'
             out = 'asc';
             
-        case {'Duration', 'BSTDuration', 'ASTDuration', 'FlipX', 'FlipY'}
+        case {'StimDuration', 'BSTDuration', 'ASTDuration', 'FlipX', 'FlipY', 'BlockShuffle', 'TrialShuffle'}
             out = 0;
             
         case {'BeforeStimText', 'AfterStimText'}
