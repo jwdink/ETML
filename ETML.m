@@ -29,8 +29,8 @@ end
 cd(session.base_dir); % change directory
 
 % Load the tab-delimited configuration files:
-session.config = ReadStructsFromTextW('config.txt');
-stim_config = ReadStructsFromTextW('stim_config.txt');
+session.config = ReadStructsFromTextW('./config.txt');
+stim_config = ReadStructsFromTextW('./stim_config.txt');
 
 sprintf('You are running %s\n\n', get_config('StudyName'));
 
@@ -95,9 +95,7 @@ try
     % Begin logging now
     session.fileID = fopen([ 'logs/' session.subject_code '-' session.start_time '.txt'],'w');
     fclose(session.fileID);
-    log_msg(sprintf('Set base dir: %s', session.base_dir));
     log_msg(sprintf('Study name: %s',get_config('StudyName', 'error')));
-    log_msg(sprintf('Random seed set as %s via "twister"',num2str(session.random_seed)));
     sfnames = fieldnames(session);
     for i = 1:length(sfnames)
         this_field = sfnames{i};
@@ -111,11 +109,8 @@ try
     session.skip_comments = get_config('SkipComments');
     if isempty(session.skip_comments); session.skip_comments = 0; end;
     
-    % Key controls
-    session.next_key = 'RightArrow';
-    session.prev_key = 'LeftArrow';
-    
-     session.keys_of_interest = eval_field( get_config('KeysOfInterest') );
+    % Keys of Interest:
+    session.keys_of_interest = eval_field( get_config('KeysOfInterest') );
     
     % Wait for experimenter to press Enter to begin
     disp(upper(sprintf('\n\n********Press any key to launch the experiment window********\n\n')));
@@ -764,10 +759,10 @@ end
             
             if slideshow
                 % if it's a slideshow, then they can sift thru the slides
-                if     strcmpi(KbName(key_code), session.next_key)
+                if     strcmpi(KbName(key_code), 'RightArrow')
                     close_image = 1;
                     new_trial_index = trial_index + 1;
-                elseif strcmpi(KbName(key_code), session.prev_key)
+                elseif strcmpi(KbName(key_code), 'LeftArrow')
                     close_image = 1;
                     new_trial_index = trial_index - 1;
                 end
