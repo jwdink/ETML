@@ -302,7 +302,7 @@ try
             
             % Shuffle trial order?:
             if get_trial_config(stim_config_full(this_block_rows(1)), 'TrialShuffle')
-                trials = shuffle_trials(trials, this_block_rows); 
+                trials = shuffle_trials(trials, stim_config_full(this_block_rows(1)) ); 
             end
             
             new_trial_index = 1;
@@ -367,9 +367,9 @@ catch exp_err
 end
 
 %% FXN_shuffle_trials
-    function trials = shuffle_trials(trials, this_block_rows)
+    function trials = shuffle_trials(trials, this_trial_config)
         
-        draw_meth = get_stim_config(this_block_rows(1), 'StimDrawFromFolderMethod');
+        draw_meth = get_trial_config(this_trial_config, 'StimDrawFromFolderMethod');
         if strcmpi(draw_meth, 'sample')
             shufmsg = ['You''ve selected incompatible options: trial shuffling'...
                 ' and non-consecutive stimuli sampling. Ignoring the former.'];

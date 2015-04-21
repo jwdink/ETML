@@ -58,15 +58,6 @@ struct = pad_trial_col(struct);
         % For each row
         for row = 1:col_len
             
-            % How many stimuli are there? What are their paths?
-            stim = get_trial_config(config_struct(row), 'Stim', 'null'); % in certain cases blank stim is OK (e.g., custom_func)
-            if isdir(stim)
-                stim_paths = comb_dir(stim, 1);
-            else
-                stim_paths = {stim};
-            end
-            num_stim = length(stim_paths);
-            
             % How many Before/After Messages are there?
             [before_stim_msgs, after_stim_msgs, num_msgs] = get_before_after_msgs(config_struct, row);
             
@@ -74,6 +65,20 @@ struct = pad_trial_col(struct);
             % check the entered value (e.g., '1:36'), expand it into a full vector:
             elem = column{row};
             expanded_elem = eval_field(elem);
+            
+            % How many stimuli are there? What are their paths?
+            stim = get_trial_config(config_struct(row), 'Stim', cell([length(expanded_elem) 1])); 
+                % in certain cases blank stim is OK (e.g., custom_func)
+            if iscell(stim)
+                stim_paths = stim;
+            else
+                if isdir(stim)
+                    stim_paths = comb_dir(stim, 1);
+                else
+                    stim_paths = {stim};
+                end
+            end
+            num_stim = length(stim_paths);
             
             % How to draw stim?
             stim_order = select_draw_method(config_struct, row, num_stim, num_msgs, expanded_elem);
@@ -99,9 +104,14 @@ struct = pad_trial_col(struct);
                 
                 % Place the proper value for 'stimuli' (e.g.,
                 % specific filepath replaces folder path, specific msg replaces cellarray)
-                new_struct(len+1).('BeforeStimText') = before_stim_msgs{question_ind}; %#ok<AGROW>
-                new_struct(len+1).('Stim')           = stim_paths{stim_ind}; %#ok<AGROW>
-                new_struct(len+1).('AfterStimText')  = after_stim_msgs{question_ind}; %#ok<AGROW>
+                new_struct(len+1).('Stim') = stim_paths{stim_ind}; %#ok<AGROW>
+                
+                if isfield(config_struct, 'BeforeStimText')
+                    new_struct(len+1).('BeforeStimText') = before_stim_msgs{question_ind}; %#ok<AGROW>
+                end
+                if isfield(config_struct, 'AfterStimText')
+                    new_struct(len+1).('AfterStimText')  = after_stim_msgs{question_ind}; %#ok<AGROW>
+                end
                 
             end % end element-expanding loop
             
