@@ -563,7 +563,7 @@ end
         before_or_after(1) = upper( before_or_after(1) ); % camelcase
         
         % What text to display?
-        the_text = trial_config.([before_or_after 'StimText']);
+        the_text = get_trial_config(trial_config, [before_or_after 'StimText'] );
         if isempty(the_text)
             return
         end
