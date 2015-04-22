@@ -443,8 +443,8 @@ end
         elseif strcmp(stim_type, 'custom')
             
             % Custom Script: 
-            [new_trial_index, out_struct] =...
-                custom_function(wind, trial_index, trial_config, out_struct);
+            [new_trial_index, out_struct, key_summary] =...
+                custom_function(wind, trial_index, trial_config, out_struct, key_summary);
             
         else
             errmsg = ['StimType "' stim_type '" is unsupported.'];
