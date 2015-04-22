@@ -1,5 +1,5 @@
 function [ new_trial_index, out_struct, key_summary ] = ...
-    custom_function(wind, trial_index, trial_config, out_struct, key_summary) 
+    custom_function(wind, trial_index, trial_config, out_struct, GL, key_summary) 
 %CUSTOM_FUNCTION Run a custom trial within an ETML experiment
 %   [new_trial_index, out_struct = custom_function(wind, trial_index, trial_config, out_struct) 
 %   runs a custom script, which can be specific to each experiment. Simply
@@ -40,6 +40,10 @@ function [ new_trial_index, out_struct, key_summary ] = ...
 %   trial n depends on how they performed on trial n-1, you could use the
 %   command 'out_struct.performance = this_trial_performance' on trial n-1
 %   and access out_struct.performance on trial n.
+%
+%   GL is a structure that's required to make draw_tex work. This is mostly only 
+%   useful if this custom_function involves code that was copied/pasted from ETML 
+%   in order to modify it slightly (e.g. writing a different 'show_vid' function).
 %
 %   'KEY_SUMMARY' is a structure which you can pass to 'check_keypress'. At 
 %   the end of the trial, information about keys of interest will be summarized
