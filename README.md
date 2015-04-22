@@ -178,6 +178,13 @@ ___
 
 
 
+# To Do:
+
+- [ ] Doc-style commenting for all functions
+- [ ] More transparent syntax for check_keypress key summary
+- [ ] More flexible support for cell arrays of stim-names in stim_config.txt
+- [ ] Support for any before/after stim (not just text)
+
 
 
 
