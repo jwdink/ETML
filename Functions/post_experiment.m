@@ -43,6 +43,10 @@ else
     comments = {''};
 end
 
+% Disable logging to eyetracker since it's shut-down now:
+session.record_phases(length(session.record_phases)+1) = 0;
+session.this_phase = length(session.record_phases);
+
 % create empty structure for results
 results = struct('key',{},'value',{});
 
@@ -54,7 +58,9 @@ end_time = ...
 sfnames= fieldnames(session);
 for i = 1:length(sfnames)
     this_field = sfnames{i};
-    if ~ strcmpi(this_field, {'data', 'config', 'fileID', 'skip_comments', 'this_phase', 'win_rect', 'keys_of_interest'})
+    if ~ strcmpi(this_field, ...
+            {'data', 'config', 'fileID', 'skip_comments', ...
+            'this_phase', 'win_rect', 'keys_of_interest', 'record_phases'})
         results(length(results) + 1).key = this_field;
         results(length(results)).value   = session.(this_field);
     end

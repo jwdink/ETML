@@ -13,7 +13,6 @@ end
 fprintf('\n# %s\n', msg);
 
 % remove any quotes in value that will screw up log file:
-% (think about removing this if speed is big priority)
 msg = strrep(msg, char(39), '');
 msg = strrep(msg, char(34), '');
 
@@ -26,7 +25,7 @@ timestamp = [num2str(year) '-' num2str(month) '-' num2str(day) ...
 fprintf(session.fileID,'%s \t%s\n',timestamp,msg);
 fclose(session.fileID);
 
-if is_in_cellarray('this_phase', fieldnames(session))
+if any( strcmpi('this_phase', fieldnames(session)) )
     if session.record_phases(session.this_phase)
         Eyelink('Message',msg);
     end
