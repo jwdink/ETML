@@ -19,6 +19,7 @@ end
 
 while 1
     failed = 0;
+    attempt_start = GetSecs();
     trials_shuffled2 = NaN(1,length(trials_shuffled1));
     stim_pool = stim_hashes;
     trials_pool = trials_shuffled1;
@@ -64,11 +65,20 @@ while 1
     end
     
     if ~failed
-        break
+        % success
+        shuffle_out = trials_shuffled2;
+        return 
+    end
+    
+    if GetSecs() - attempt_start > 8
+        log_msg('Failed to shuffle trials while preventing consecutive presentation of same stimuli. Will simply shuffle.');
+        tidx = randperm(length(trials));
+        shuffle_out = trials(tidx);
+        return
     end
     
 end
 
-shuffle_out = trials_shuffled2;
+
 
 end

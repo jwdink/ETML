@@ -64,6 +64,8 @@ Here are the required columns:
 
 An ETML experiment is structured heirarchically, where phases are composed of blocks, blocks are composed of trials. If you include optional column **"ShuffleTrialsInBlock"**, you can set this to 1 for a block, and this will shuffle the trials in that block. Similarly for the optional column **"ShuffleBlockssInPhase"**. Leave this option blank on a given trial/block, or set it 0, to *not* shuffle. 
 
+*Note that, by default, **ShuffleTrialsInBlock**  will prevent a given stimuli from being shown on two consecutive trials (e.g., if you are looping over the contents of a folder several times). If you don't want this behavior, enter `allow_consec` for ShuffleTrialsInBlock, instead of `1`.*
+
 *Note that in the data output from the experiment, 'trial' and 'block' numbers will specify the order these trials/blocks were shown in, not the original number from this stim_config.txt. In other words, the trial number specified in the config.txt is not meaningful on those blocks where 'TrialShuffle' is on (and ditto for blocks and blockshuffle).*
 
 A 'trial' should, for the most part, be thought of as a single stimulus presentation. This makes analysis much easier: each trial has its own image/video, its own interest areas, etc. However, as decribed below, pre/post stimuli can be added to a trial.
@@ -112,16 +114,15 @@ ___
 
 You can specify how to draw stimuli from the folder with the optional column **"StimDrawFromFolderMethod"**.
 
-**Note:** *Some of these options are detailed, and may be confusing if you're just glancing around. If you're simply shuffling your trials (as described above), or if you're simply running your trials in order, these options aren't something you have to worry about-- you can just ignore this column (and this section of the documentation).*
+**Note:** *If your number of trials = your number of stim, and you're simply shuffling your trials (as described above), or simply running your trials in order, these options aren't something you have to worry about.*
 
 The options for **"StimDrawFromFolderMethod"** are:
 
 - **Ascending ('asc')** : The default. Pick the filenames within the folder in alphabetical/numeric order.
 - **Descending ('desc')** : Pick the filenames within the folder in reverse-alphabetical/numeric order.
-- **Sample Randomly ('sample')** : Randomly sample without replacement. 
+- **Sample Randomly without Replacement ('sample')** : Randomly sample without replacement. 
   - If number of stimuli is greater than or equal to number of trials, this has obvious behavior: draw from pool of possible stimuli for each trial.
-  - If number of stimuli is less than number of trials, behavior is easiest to explain by example: if there are 10 stimuli, and 20 trials, this will sample without replacement as if there was two of each stimuli. (Number of trials must be an even multiple of number of stimuli.) By default, this does not allow consecutive presentation of the same stim-item (which means if there are only two stim-items, this will not actually shuffle!).
-- **Sample Randomly, Allow Consecutive ('sample_consec')** : Same as above, but this *does* allow for consecutive presentation of identical stim-items.
+  - If number of stimuli is less than number of trials, exhaust contents of folder before looping back through.
 - **Sample Randomly with Replacement ('sample_replace')** : Randomly sample *with* replacement. 
 
 ___
@@ -149,14 +150,14 @@ When a cell array like this is supplied, the stimulus in the 'Stim' column will 
 
 In contrast, PreStim and PostStim are assumed to be matched: e.g., if one is a cell array of length three, the other must be length three as well. Again, this is to follow the common study design of (1) telling the participant what they will be asked, (2) showing stimuli, (3) asking them about what they saw. In other words, it's assumed that (1) and (3) go together (e.g., "you will be asked about X"; [image]; "here's a question about X").
 
-You can also randomly sample from these question/stim-item pairings with the options described in the previous section ('Method of Drawing Stim from Folder'). One useful option is the non-consecutive option: randomly select a stim-item and a question to show before/after it, with the constraint that the same stim-item can't be shown twice in a row.
+You can also randomly sample from these question/stim-item pairings with the options described in the previous section ('ShuffleTrialsInBlock'). One useful option is the (default) non-consecutive option: randomly select a stim-item and a question to show before/after it, with the constraint that the same stim-item can't be shown twice in a row.
 
 ___
 
 
 ## Custom Trials
 
-*[This section a work in progress. For now, the 'custom_function.m' file in the Example folder should give you all the information you need.]*
+*[This section a work in progress. For now, the 'custom_function.m' file in the Example folder should give you much of the information you need. The main 'TO DO' for me is to give better documentation to the various functions in ETML, so that they can be used by anyone writing their own custom trial (e.g., logging messages, recording/logging keypresses).]*
 
 ## Running the Experiment
 
@@ -181,8 +182,8 @@ ___
 
 - [ ] Doc-style commenting for all functions
 - [ ] More transparent syntax for check_keypress key summary
-- [ ] More flexible support for cell arrays of stim-names in stim_config.txt
-- [ ] Support for any before/after stim (not just text)
+- [x] More flexible support for cell arrays of stim-names in stim_config.txt
+- [x] Support for any before/after stim (not just text)
 
 
 

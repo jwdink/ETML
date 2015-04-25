@@ -126,10 +126,8 @@ struct = pad_trial_col(struct);
             case 'desc'
                 stim_order = repv(1:(num_stim*num_pp), length(expanded_elem) );
                 stim_order = stim_order(end:-1:1); % reverse!
-            case 'sample'
-                stim_order = randsample_stim_order(num_pp, num_stim, length(expanded_elem), 0 );
-            case 'sample_consec'
-                stim_order = randsample_stim_order(num_pp, num_stim, length(expanded_elem), 1 );
+            case {'sample', 'sample_noreplace'}
+                stim_order = randsample_with_bigger(num_pp*num_stim, length(expanded_elem) );
             case 'sample_replace'
                 stim_order = randsample(num_pp * num_stim, length(expanded_elem), 0);
             otherwise
@@ -142,45 +140,6 @@ struct = pad_trial_col(struct);
     function [out] = repv(vec, length_out)
         repvec = repmat(vec, 1, ceil(length_out/length(vec)));
         out = repvec(1:length_out);
-    end
-
-%% Randomly Sample Stimuli Ordering:
-    function [stim_order_rs] = randsample_stim_order(num_pp, num_stim, num_trials, consec_allowed)
-        if num_trials > num_stim
-            if mod(num_trials, (num_stim*num_pp)) ~= 0 % num trials / num_stim is whole num
-                msg = ['If randomly sampling without replacement, and number of trials is greater than ' ...
-                    'number of stimuli, then number of trials must be an even multiple of number ' ...
-                    'of stimuli. However, on one of your trials, you have ' num2str(num_stim*num_pp) ...
-                    ' stimuli, and ' num2str(num_trials) ' trials.'];
-                error(msg);
-            end
-        end
-        
-        if consec_allowed
-            stim_order_rs = randsample_with_bigger(num_pp*num_stim, num_trials);
-        else
-            
-            if num_trials > 2
-                disp('stop');
-            end
-            
-            if num_trials > (num_stim*num_pp)
-                stim_hashes = sort( repv(1:num_stim, num_trials) )
-                trials = 1:num_trials; 
-                stim_order = sort( repv(1:(num_stim*num_pp), num_trials) ); 
-                rsi = shuffle_no_consec(trials, stim_hashes);
-                stim_order_rs = stim_order(rsi);
-            else
-                stim_hashes = sort( repv(1:num_stim, (num_stim*num_pp)) );
-                trials = 1:num_trials;
-                stim_order_rs = shuffle_no_consec(trials, stim_hashes);
-                stim_order_rs = stim_order_rs( 1:(num_stim*num_pp) ); % take subset
-            end
-            
-            [pp_ind, stim_ind] = ind2sub([num_pp num_stim], stim_order_rs);
-            
-        end
-
     end
 
 %% Randsample where k can be bigger than n:
