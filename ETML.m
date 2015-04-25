@@ -130,7 +130,7 @@ try
     InitializeMatlabOpenGL([],[],1); 
     
     if session.debug_mode
-        % skip sync tests for faster load
+        % skip sync tests
         Screen('Preference','SkipSyncTests', 1);
         log_msg('Running in DebugMode');
     else
@@ -150,7 +150,7 @@ try
     if session.debug_mode
         refresh_rate = [];
     else
-        refresh_rate = get_config('RefreshRate', 60);
+        refresh_rate = get_config('RefreshRate', []);
     end
     if session.debug_mode
         res = [0, 0, resolution(1), resolution(2)];
@@ -269,9 +269,9 @@ try
         blocks = unique( [stim_config_full(this_phase_rows).('BlockNum')] );
         
         % Shuffle block order?:
-        if get_trial_config(stim_config_full(this_phase_rows(1)), 'BlockShuffle')
+        if get_trial_config(stim_config_full(this_phase_rows(1)), 'ShuffleBlocksInPhase')
             log_msg('Shuffling blocks in this phase');
-            bidx = randperm(length(trials));
+            bidx = randperm(length(blocks));
             blocks = blocks(bidx);
         end
         
@@ -293,8 +293,8 @@ try
             trials = unique( [stim_config_full(this_block_rows).('TrialNum')] );
             
             % Shuffle trial order?:
-            if get_trial_config(stim_config_full(this_block_rows(1)), 'TrialShuffle')
-                trials = shuffle_trials(trials, stim_config_full(this_block_rows(1)) ); 
+            if get_trial_config(stim_config_full(this_block_rows(1)), 'ShuffleTrialsInBlock')
+                trials = shuffle_trials(trials, stim_config_full, this_block_rows ); 
             end
             
             new_trial_index = 1;
@@ -324,9 +324,9 @@ try
                     out_struct = struct();
                 end
                 
-                [new_trial_index, out_struct, key_summary] =...
-                    show_stimuli(wind, trial_index , stim_config_full(this_trial_row), out_struct, GL);
-                
+                [new_trial_index, out_struct, key_summary] = run_trial( ...
+                    wind, trial_index , stim_config_full(this_trial_row), out_struct, GL);
+
                 stop_trial(trial_index, block_index, stim_config_full(this_trial_row), key_summary);
                 %%%
             end

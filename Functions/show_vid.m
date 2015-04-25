@@ -1,19 +1,23 @@
 %% FXN_show_vid
-function [new_trial_index, key_summary] = show_vid(wind, trial_index, trial_config, GL, key_summary)
+function [new_trial_index, key_summary] = show_vid(wind, trial_index, trial_config, GL, stim_position, key_summary)
 
 global session
 
 if nargin < 5
+    stim_position = '';
+end
+if nargin < 6
     key_summary = [];
 end
 
 % Open Movie(s):
+stim_path = [session.base_dir get_trial_config(trial_config, [stim_position 'Stim'])];
 win_rect = session.win_rect; 
 [movie mov_dur fps imgw imgh] = ...
-    Screen('OpenMovie', wind, [session.base_dir trial_config.('Stim')] ); %#ok<NASGU,ASGLU>
+    Screen('OpenMovie', wind, stim_path ); %#ok<NASGU,ASGLU>
 
 % Duration, duration-jitter:
-[duration, min_duration] = set_duration(trial_config, mov_dur);
+[duration, min_duration] = set_duration(trial_config, mov_dur, stim_position);
 
 % Save Stim Attributes:
 tex = Screen('GetMovieImage', wind, movie, [], 1); % get image from movie 1 sec in
@@ -27,7 +31,7 @@ Screen('PlayMovie', movie , mov_rate);
 WaitSecs(.10);
 Screen('SetMovieTimeIndex', movie, 0);
 
-log_msg( sprintf('Playing Video: %s', trial_config.('Stim')) );
+log_msg( sprintf('Playing Video: %s', trial_config.([stim_position 'Stim'])) );
 vid_start_clock = clock;
 vid_start = GetSecs();
 
@@ -80,9 +84,9 @@ Screen('Flip', wind);
 new_trial_index = trial_index + 1;
 
 %
-    function [duration, min_duration] = set_duration(trial_config, mov_dur)
+    function [duration, min_duration] = set_duration(trial_config, mov_dur, stim_position)
         
-        dur_field = get_trial_config(trial_config, 'StimDuration');
+        dur_field = get_trial_config(trial_config, [stim_position 'StimDuration']);
         dur_config = eval_field(dur_field);
         
         if length(dur_config) > 1 % they specified min and max

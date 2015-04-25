@@ -1,7 +1,7 @@
 %% FXN_get_trial_config
 function out = get_trial_config(trial_config, field, default)
 
-if is_in_cellarray(field, fieldnames(trial_config))
+if any( strcmp(field, fieldnames(trial_config)) )
     % They have this column in their stim config:
     if ~isempty(trial_config.(field)); % and it's not empty
         out = trial_config.(field);
@@ -17,14 +17,15 @@ else
         case 'StimDrawFromFolderMethod'
             out = 'asc';
             
-        case {'StimDuration', 'BSTDuration', 'ASTDuration', 'FlipX', 'FlipY', 'BlockShuffle', 'TrialShuffle'}
+        case {'StimDuration', 'PreStimDuration', 'PostStimDuration', 'FlipX', 'FlipY',...
+                'ShuffleBlocksInPhase', 'ShuffleTrialsInBlock'}
             out = 0;
             
-        case {'BeforeStimText', 'AfterStimText'}
+        case {'PreStim', 'PostStim', 'PreStimType', 'PostStimType'}
             out = '';
             
         otherwise
-            error(['Column ' field ' not found in stim_config.txt. ETML does not know a default for this column.'])
+            error(['"' field '" not found (at least for some rows) in stim_config.txt. No default for this column.'])
             
     end
 end

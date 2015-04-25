@@ -1,16 +1,27 @@
 %% FXN_show_img
-function [new_trial_index, key_summary] = show_img (wind, trial_index, trial_config, GL, key_summary)
+function [new_trial_index, key_summary] = show_img (wind, trial_index, trial_config, GL, stim_position, key_summary)
 
 global session
 
-stim_path = trial_config.('Stim');
+if nargin < 5
+    stim_position = '';
+end
+if nargin < 6
+    key_summary = [];
+end
+
+stim_path = [session.base_dir get_trial_config(trial_config, [stim_position 'Stim'])];
 win_rect = session.win_rect;
 
 % Get trial info about stim duration:
-[duration, min_duration] = set_duration(trial_config);
+[duration, min_duration] = set_duration(trial_config, stim_position);
 
 % Slideshow:
-slideshow = strcmpi('slideshow', trial_config.('StimType'));
+if isempty(stim_position)
+    slideshow = strcmpi('slideshow', trial_config.('StimType'));
+else
+    slideshow = 0; % no slideshows in pre/post stim
+end
 
 % Get image:
 image = imread(stim_path);                                      % read in image file
@@ -77,9 +88,9 @@ add_data('StimStartTimestamp', img_start_clock_str);
 [~, key_summary] = check_keypress(key_code, key_summary, 'flush'); % flush currently pressed keys
 
 %
-    function [duration, min_duration] = set_duration(trial_config)
+    function [duration, min_duration] = set_duration(trial_config, stim_position)
         
-        dur_field = get_trial_config(trial_config, 'StimDuration');
+        dur_field = get_trial_config(trial_config, [stim_position 'StimDuration']);
         dur_config = eval_field(dur_field);
         
         if length(dur_config) > 1 % they specified min and max

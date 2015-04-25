@@ -1,5 +1,9 @@
 %% FXN_show_text
-function key_summary = show_text(wind, trial_config, before_or_after, key_summary)
+function key_summary = show_text(wind, trial_config, stim_position, key_summary)
+
+if nargin < 3
+    stim_position = '';
+end
 
 if nargin < 4
     key_summary = [];
@@ -7,16 +11,11 @@ end
 
 while KbCheck; end;
 
-before_or_after(1) = upper( before_or_after(1) ); % camelcase
-
 % What text to display?
-the_text = get_trial_config(trial_config, [before_or_after 'StimText'] );
-if isempty(the_text)
-    return
-end
+the_text = get_trial_config(trial_config, [stim_position 'Stim'] );
 
 % How long?
-[duration, min_duration] = set_duration(trial_config, before_or_after);
+[duration, min_duration] = set_duration(trial_config, stim_position);
 
 % Draw:
 DrawFormattedText(wind, the_text, 'center', 'center');
@@ -44,9 +43,9 @@ end
 return
 
 %
-    function [duration, min_duration] = set_duration(trial_config, before_or_after)
+    function [duration, min_duration] = set_duration(trial_config, stim_position)
         
-        dur_field = get_trial_config(trial_config, [before_or_after(1) 'STDuration']);
+        dur_field = get_trial_config(trial_config, [stim_position 'StimDuration']);
         dur_config = eval_field(dur_field);
         
         if length(dur_config) > 1

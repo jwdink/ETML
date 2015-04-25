@@ -1,7 +1,7 @@
 function [struct] = pad_struct (config_struct)
 %% Main Code:
 
-if nargin<1
+if nargin < 1
     config_struct = ReadStructsFromTextW('./stim_config.txt');
 end
 
@@ -11,10 +11,10 @@ struct = pad_col('PhaseNum'  ,struct);
 struct = pad_col('BlockNum'  ,struct);
 struct = pad_trial_col(struct);
 
-%% Helper functions:
+%WriteStructsToText('foo.txt', struct);
 
 %% Make a Column
-% (not a trial column, though)
+% (for any col but trial col)
     function [new_struct] = pad_col (col_name, config_struct)
         
         % Extract this column, convert its contents to a string (to be processed below):
@@ -58,30 +58,20 @@ struct = pad_trial_col(struct);
         % For each row
         for row = 1:col_len
             
-            % How many Before/After Messages are there?
-            [before_stim_msgs, after_stim_msgs, num_msgs] = get_before_after_msgs(config_struct, row);
-            
             % How many trials are there?
             % check the entered value (e.g., '1:36'), expand it into a full vector:
             elem = column{row};
             expanded_elem = eval_field(elem);
             
-            % How many stimuli are there? What are their paths?
-            stim = get_trial_config(config_struct(row), 'Stim', cell([length(expanded_elem) 1])); 
-                % in certain cases blank stim is OK (e.g., custom_func)
-            if iscell(stim)
-                stim_paths = stim;
-            else
-                if isdir(stim)
-                    stim_paths = comb_dir(stim, 1);
-                else
-                    stim_paths = {stim};
-                end
-            end
+            % Expand Main Stim into cell-array of stim:
+            stim_paths = get_stim(config_struct(row));
             num_stim = length(stim_paths);
             
+            % Expand Pre-Stim & Post-Stim into cell-array of stim:
+            [pre_stim_paths, post_stim_paths, num_pp] = get_pp_stim(config_struct(row));
+            
             % How to draw stim?
-            stim_order = select_draw_method(config_struct, row, num_stim, num_msgs, expanded_elem);
+            stim_order = select_draw_method(config_struct, row, num_stim, num_pp, expanded_elem);
             
             % For each row in the unexpanded struct:
             for t = 1:length(expanded_elem)
@@ -94,7 +84,7 @@ struct = pad_trial_col(struct);
                 end
                 
                 % Get Question/Stim to add, according to stim_order:
-                [question_ind, stim_ind] = ind2sub([num_msgs num_stim], stim_order(t) );
+                [pp_ind, stim_ind] = ind2sub([num_pp num_stim], stim_order(t) );
                 
                 % Insert a row into new struct:
                 new_struct(len+1) = config_struct(row);  %#ok<AGROW>
@@ -106,11 +96,11 @@ struct = pad_trial_col(struct);
                 % specific filepath replaces folder path, specific msg replaces cellarray)
                 new_struct(len+1).('Stim') = stim_paths{stim_ind}; %#ok<AGROW>
                 
-                if isfield(config_struct, 'BeforeStimText')
-                    new_struct(len+1).('BeforeStimText') = before_stim_msgs{question_ind}; %#ok<AGROW>
+                if isfield(config_struct, 'PreStim')
+                    new_struct(len+1).('PreStim') = pre_stim_paths{pp_ind}; %#ok<AGROW>
                 end
-                if isfield(config_struct, 'AfterStimText')
-                    new_struct(len+1).('AfterStimText')  = after_stim_msgs{question_ind}; %#ok<AGROW>
+                if isfield(config_struct, 'PostStim')
+                    new_struct(len+1).('PostStim')  = post_stim_paths{pp_ind}; %#ok<AGROW>
                 end
                 
             end % end element-expanding loop
@@ -119,8 +109,8 @@ struct = pad_trial_col(struct);
         
     end % end func
 
-% Choose Stim Order based on Draw method:
-    function [stim_order] = select_draw_method(config_struct, row, num_stim, num_msgs, expanded_elem)
+%% Choose Stim Order based on Draw method:
+    function [stim_order] = select_draw_method(config_struct, row, num_stim, num_pp, expanded_elem)
         
         draw_meth = get_trial_config(config_struct(row), 'StimDrawFromFolderMethod');
         if num_stim < 2 && ~isempty(draw_meth) && ~strcmpi(draw_meth, 'asc')
@@ -132,58 +122,68 @@ struct = pad_trial_col(struct);
         end
         switch lower(draw_meth)
             case 'asc'
-                stim_order = repv(1:(num_stim*num_msgs), length(expanded_elem) );
+                stim_order = repv(1:(num_stim*num_pp), length(expanded_elem) );
             case 'desc'
-                stim_order = repv(1:(num_stim*num_msgs), length(expanded_elem) );
+                stim_order = repv(1:(num_stim*num_pp), length(expanded_elem) );
                 stim_order = stim_order(end:-1:1); % reverse!
             case 'sample'
-                stim_order = randsample_stim_order(num_msgs, num_stim, length(expanded_elem), 0 );
+                stim_order = randsample_stim_order(num_pp, num_stim, length(expanded_elem), 0 );
             case 'sample_consec'
-                stim_order = randsample_stim_order(num_msgs, num_stim, length(expanded_elem), 1 );
+                stim_order = randsample_stim_order(num_pp, num_stim, length(expanded_elem), 1 );
             case 'sample_replace'
-                stim_order = randsample(num_msgs * num_stim, length(expanded_elem), 0);
+                stim_order = randsample(num_pp * num_stim, length(expanded_elem), 0);
             otherwise
                 stim_order = 1:length(expanded_elem);
         end
         
     end
 
-% Repeat vector:
+%% Repeat vector:
     function [out] = repv(vec, length_out)
         repvec = repmat(vec, 1, ceil(length_out/length(vec)));
         out = repvec(1:length_out);
     end
 
-% Randomly Sample Stimuli Ordering:
-    function [stim_order] = randsample_stim_order(num_msgs, num_stim, num_trials, consec_allowed)
+%% Randomly Sample Stimuli Ordering:
+    function [stim_order_rs] = randsample_stim_order(num_pp, num_stim, num_trials, consec_allowed)
         if num_trials > num_stim
-            if mod(num_trials, (num_stim*num_msgs)) ~= 0 % num trials / num_stim is whole num
+            if mod(num_trials, (num_stim*num_pp)) ~= 0 % num trials / num_stim is whole num
                 msg = ['If randomly sampling without replacement, and number of trials is greater than ' ...
-                'number of stimuli, then number of trials must be an even multiple of number ' ...
-                'of stimuli. However, on one of your trials, you have ' num2str(num_stim*num_msgs) ...
-                ' stimuli, and ' num2str(num_trials) ' trials.'];
-            error(msg);
+                    'number of stimuli, then number of trials must be an even multiple of number ' ...
+                    'of stimuli. However, on one of your trials, you have ' num2str(num_stim*num_pp) ...
+                    ' stimuli, and ' num2str(num_trials) ' trials.'];
+                error(msg);
             end
         end
         
-        if num_stim*num_msgs < 3 && ~consec_allowed
-            % if only 2 stim to choose from, this problem reduces (and else method below ineffecient)
-            stim_order = repmat(randsample(2,2), num_trials, 1);
+        if consec_allowed
+            stim_order_rs = randsample_with_bigger(num_pp*num_stim, num_trials);
         else
-            stim_order = randsample_with_bigger(num_msgs*num_stim, num_trials);
-            while ~consec_allowed % if consec allowed, this doesn't run, we just accept stim_order
-                [~, stim_ind] = ind2sub([num_msgs num_stim], stim_order);
-                if all( diff( stim_ind ) )
-                    return
-                end
-                stim_order = randsample_with_bigger(num_msgs*num_stim, num_trials);
+            
+            if num_trials > 2
+                disp('stop');
             end
             
+            if num_trials > (num_stim*num_pp)
+                stim_hashes = sort( repv(1:num_stim, num_trials) )
+                trials = 1:num_trials; 
+                stim_order = sort( repv(1:(num_stim*num_pp), num_trials) ); 
+                rsi = shuffle_no_consec(trials, stim_hashes);
+                stim_order_rs = stim_order(rsi);
+            else
+                stim_hashes = sort( repv(1:num_stim, (num_stim*num_pp)) );
+                trials = 1:num_trials;
+                stim_order_rs = shuffle_no_consec(trials, stim_hashes);
+                stim_order_rs = stim_order_rs( 1:(num_stim*num_pp) ); % take subset
+            end
+            
+            [pp_ind, stim_ind] = ind2sub([num_pp num_stim], stim_order_rs);
+            
         end
-        
+
     end
 
-% Randsample where k is bigger than n:
+%% Randsample where k can be bigger than n:
     function [y] = randsample_with_bigger(n,k)
         if k > n
             population = repmat(1:n, 1, k/n);
@@ -193,42 +193,109 @@ struct = pad_trial_col(struct);
         y = randsample(population, k);
     end
 
-% Get Before-Stim / After-Stim Message Text:
-    function [before_stim_msgs after_stim_msgs, num_msgs] = get_before_after_msgs(config_struct, row)
+
+%% Parse Stim Column:
+    function [stim_paths] = get_stim(trial_config, stim_position)
+        if nargin < 2
+            stim_position = '';
+        end
         
-        before_stim_field = get_trial_config(config_struct(row), 'BeforeStimText');
-        after_stim_field  = get_trial_config(config_struct(row), 'AfterStimText');
+        stim_field = get_trial_config(trial_config, [stim_position 'Stim']);
+        need_a_path = any( strcmpi(get_trial_config(trial_config, [stim_position 'StimType']), {'video', 'image'}) );
+        stim_paths = parse_stim_field(stim_field, need_a_path, 1);
         
-        all_msgs = {eval_field(before_stim_field) eval_field(after_stim_field)};
-        msg_empty = cellfun('isempty', all_msgs);
+    end
+
+    function [stim_paths] = parse_stim_field(stim_field, need_a_path, top_call)
         
-        if ~all(msg_empty)
-            % not all are empty?
-            if any(msg_empty)
+        if nargin < 3
+            top_call = 0;
+        end
+        
+        if isdir(stim_field)
+            % it's a directory
+            stim_paths = comb_dir(stim_field, 1);
+            return
+        end
+        
+        if exist(stim_field, 'file')
+            % it's a filepath
+            if top_call
+                stim_paths = {stim_field};
+            else
+                stim_paths = stim_field;
+            end
+            return
+        end
+        
+        try
+            % maybe it's a cell array of paths/directories
+            eval_attempt = eval_field(stim_field);
+            if iscell(eval_attempt)
+                stim_paths = cellfun(@(x)parse_stim_field(x,need_a_path), eval_attempt);
+                return
+            else
+                if isempty(eval_attempt)
+                    stim_paths = {''};
+                else
+                    if top_call
+                        stim_paths = {eval_attempt};
+                    else
+                        stim_paths = eval_attempt;
+                    end
+                end
+            end
+        catch err %#ok<NASGU>
+            if need_a_path
+                error(sprintf(['One of your trials needs a path to a stim or stim-directory, '...
+                    'but this could not be parsed from the following stim_config.txt entry: \n' ...
+                    stim_field]) ); %#ok<SPERR>
+            else
+                if top_call
+                    stim_paths = {stim_field};
+                else
+                    stim_paths = {stim_field};
+                end
+            end
+            return
+        end
+        
+    end
+
+
+
+%% Get Pre&Post Stim
+    function [pre_stim_paths, post_stim_paths, num_pp] = get_pp_stim(trial_config)
+        
+        pre_stim_paths = get_stim(trial_config, 'Pre');
+        post_stim_paths = get_stim(trial_config, 'Post');
+        
+        all_stim_paths = {pre_stim_paths post_stim_paths};
+        singular_path = cellfun(@(x)length(x)==1, all_stim_paths);
+        
+        if ~all(singular_path)
+            % not all are empty/singular?
+            if any(singular_path)
                 % one of them is?
-                % make empty one into cell array with length of nonempty, 
-                % fill with blank msgs that'll be ignored in stim presentation
-                all_msgs{msg_empty} = cell( 1, length(all_msgs{~msg_empty}) );
+                % make empty one into cell array with length of nonempty
+                all_stim_paths{singular_path} = repmat(all_stim_paths{singular_path}, 1, length(all_stim_paths{~singular_path}) );
                 
             else
                 % neither of them is
                 % confirm they're same length
-                if length(all_msgs{1}) ~= length(all_msgs{2})
-                    log_msg(['If the BeforeStimText for a trial is a cell array, then the' ...
-                        'AfterStimText must be a cell array of the same length. And vice versa.'])
+                if length(all_stim_paths{1}) ~= length(all_stim_paths{2})
+                    log_msg(['If the PreStim for a trial is a cell array, then the' ...
+                        'PostStim must be a cell array of the same length. And vice versa.'])
                     log_msg('Check your stim_config.txt file.')
-                    log_msg(['BeforeStimText Entered: ' before_stim_field])
-                    log_msg(['AfterStimTextEntered: ' after_stim_field]);
                     error('See above.');
                 end
             end
-        else 
-            all_msgs = {{''} {''}};
         end
         
-        before_stim_msgs = all_msgs{1};
-        after_stim_msgs  = all_msgs{2};
-        num_msgs = length(before_stim_msgs);
+        pre_stim_paths = all_stim_paths{1};
+        post_stim_paths = all_stim_paths{2};
+        num_pp = length(post_stim_paths); % have same length
+        return
     end
 
 end
