@@ -22,14 +22,14 @@ while 1
     Screen('DrawTexture', wind, tex, [], dest_rect);
     Screen('Flip',wind);
     
-    % Change me:
+    %% Change me:
     if GetSecs() - fix_start > pre_delay
         [~,~,code] = KbCheck();
         if max( strcmpi(KbName(code), 'space') ) || max( strcmpi(KbName(code), 'Escape') )
             break
         end
     end
-    %
+    %%%%
 end
 
 end

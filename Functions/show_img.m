@@ -10,6 +10,15 @@ if nargin < 6
     key_summary = [];
 end
 
+while KbCheck; end;
+
+% Keys of Interest:
+if ~isempty(session.keys_of_interest)
+    key_codes_of_interest = cellfun(@KbName, session.keys_of_interest);
+else
+    key_codes_of_interest = 1:255;
+end
+
 stim_path = [session.base_dir get_trial_config(trial_config, [stim_position 'Stim'])];
 win_rect = session.win_rect;
 
@@ -62,9 +71,9 @@ while ~close_image
             new_trial_index = trial_index - 1;
         end
     else
-        % if it's an image, advance on keypress, assuming it's been
+        % if it's an image, advance on keypress, given that it's been
         % up for minimum amount of time
-        if any(key_code)
+        if any(key_code(key_codes_of_interest)) % they press one of the keys of interest
             if GetSecs() > (image_start + min_duration)
                 close_image = 1;
                 new_trial_index = trial_index + 1;

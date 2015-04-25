@@ -1,6 +1,8 @@
 %% FXN_show_text
 function key_summary = show_text(wind, trial_config, stim_position, key_summary)
 
+global session
+
 if nargin < 3
     stim_position = '';
 end
@@ -10,6 +12,13 @@ if nargin < 4
 end
 
 while KbCheck; end;
+
+% Keys of Interest:
+if ~isempty(session.keys_of_interest)
+    key_codes_of_interest = cellfun(@KbName, session.keys_of_interest);
+else
+    key_codes_of_interest = 1:255;
+end
 
 % What text to display?
 the_text = get_trial_config(trial_config, [stim_position 'Stim'] );
@@ -25,7 +34,7 @@ flipy = get_trial_config(trial_config, 'FlipY', 0);
 DrawFormattedText(wind, the_text, xc, yc, [], [], flipx, flipy);
 Screen('Flip', wind);
 text_start = GetSecs();
-log_msg(['Showing text :' the_text]);
+log_msg(['Showing text : ' regexprep(the_text,'[^a-zA-Z]',' ')]); % escape special characters
 
 % Wait For KeyPress:
 key_code = check_keypress();
@@ -36,7 +45,7 @@ while 1
         break % end
     end
     
-    if any(key_code)
+    if any(key_code(key_codes_of_interest)) % they press one of the keys of interest
         if GetSecs() - text_start >= min_duration
             break % end
         end

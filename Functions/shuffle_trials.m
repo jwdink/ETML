@@ -3,7 +3,7 @@ function trials = shuffle_trials(trials, stim_config_full, this_block_rows)
 
 log_msg('Shuffling trials in this block.');
 
-shuffle_meth = get_trial_config(stim_config_full(this_block_rows(1), 'ShuffleTrialsInBlock'));
+shuffle_meth = get_trial_config(stim_config_full(this_block_rows(1)), 'ShuffleTrialsInBlock');
 
 if strcmpi(shuffle_meth, 'allow_consec')
     

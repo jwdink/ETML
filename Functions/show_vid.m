@@ -10,6 +10,15 @@ if nargin < 6
     key_summary = [];
 end
 
+while KbCheck; end;
+
+% Keys of Interest:
+if ~isempty(session.keys_of_interest)
+    key_codes_of_interest = cellfun(@KbName, session.keys_of_interest);
+else
+    key_codes_of_interest = 1:255;
+end
+
 % Open Movie(s):
 stim_path = [session.base_dir get_trial_config(trial_config, [stim_position 'Stim'])];
 win_rect = session.win_rect; 
@@ -43,7 +52,7 @@ while 1
         break % end movie
     end
     
-    if any(key_code)
+    if any(key_code(key_codes_of_interest)) % they press one of the keys of interest
         if GetSecs() - vid_start >= min_duration
             break % end movie
         end
