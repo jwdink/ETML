@@ -120,7 +120,7 @@ The options for **"StimDrawFromFolderMethod"** are:
 - **Descending ('desc')** : Pick the filenames within the folder in reverse-alphabetical/numeric order.
 - **Sample Randomly ('sample')** : Randomly sample without replacement. 
   - If number of stimuli is greater than or equal to number of trials, this has obvious behavior: draw from pool of possible stimuli for each trial.
-  - If number of stimuli is less than number of trials, behavior is easiest to explain by example: if there are 10 stimuli, and 20 trials, this will sample without replacement as if there was two of each stimuli. (Number of trials must be an even multiple of number of stimuli.) By default, this does not allow consecutive presentation of the same stim-item (which means if there are only two stim-items, this will not actually shuffle!).
+  - If number of stimuli is less than number of trials, behavior is easiest to explain by example: if there are 10 stimuli, and 20 trials, this will sample without replacement as if there was two of each stimuli. (Number of trials must be an even multiple of number of stimuli.) *By default, this does not allow consecutive presentation of the same stim-item.*
 - **Sample Randomly, Allow Consecutive ('sample_consec')** : Same as above, but this *does* allow for consecutive presentation of identical stim-items.
 - **Sample Randomly with Replacement ('sample_replace')** : Randomly sample *with* replacement. 
 
@@ -181,8 +181,9 @@ ___
 
 - [ ] Doc-style commenting for all functions
 - [ ] More transparent syntax for check_keypress key summary
-- [ ] More flexible support for cell arrays of stim-names in stim_config.txt
-- [ ] Support for any before/after stim (not just text)
+- [ ] Finish this readme
+- [x] More flexible support for cell arrays of stim-names in stim_config.txt
+- [x] Support for any before/after stim (not just text)
 
 
 
