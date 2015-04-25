@@ -84,7 +84,7 @@ ETML knows how to interpret any of the following optional columns (for images, v
 
 * **StimCenterX, StimCenterY** : What position on the screen do you want the stim to be? (E.g., `400,400` puts the center of the 400 pixels below the top of the screen, and 400 pixels rightwards of the left-side of the screen). Default is centered.
 * **FlipX, FlipY** : Mirror the stim? Default no.
-* * **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
+* **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
 
 
 ### Trial / Stimuli Duration
@@ -182,6 +182,7 @@ ___
 
 - [ ] Doc-style commenting for all functions
 - [ ] More transparent syntax for check_keypress key summary
+- [ ] Finish this readme
 - [x] More flexible support for cell arrays of stim-names in stim_config.txt
 - [x] Support for any before/after stim (not just text)
 
