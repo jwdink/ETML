@@ -2,7 +2,6 @@ function show_fixation_cross(wind, dim, fix_time, pre_delay)
 %%
 global session
 
-
 if nargin <2
     dim = 50;
 end
@@ -16,6 +15,7 @@ end
 imgmat = make_cross(dim, [0 0 0]);
 dest_rect = CenterRect([0 0 dim dim], session.win_rect);
 
+log_msg('Showing Fixation Cross');
 fix_start = GetSecs();
 while 1
     tex = Screen('MakeTexture', wind, imgmat);

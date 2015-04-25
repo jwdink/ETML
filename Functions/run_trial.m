@@ -17,6 +17,8 @@ if strcmpi(pre_stim_type, 'slideshow')
     pre_stim_type = 'image';
 end
 if ~isempty(pre_stim_type)
+    add_data('PreStim', get_trial_config(trial_config, 'PreStim'));
+    add_data('PreStimType', pre_stim_type);
     [~, out_struct, key_summary] = ...
         show_stim(wind, pre_stim_type, trial_index, trial_config, out_struct, GL, 'Pre', key_summary);
 end
@@ -30,6 +32,8 @@ stim_type = lower( get_trial_config(trial_config, 'StimType') );
 % Show Post-Stim:
 post_stim_type = lower( get_trial_config(trial_config, 'PostStimType') );
 if strcmpi(post_stim_type, 'slideshow')
+    add_data('PostStim', get_trial_config(trial_config, 'PreStim'));
+    add_data('PostStimType', pre_stim_type);
     log_msg('Warning: Slideshow was selected for post-stim-type, which is not allowed. Using "image" instead');
     post_stim_type = 'image';
 end

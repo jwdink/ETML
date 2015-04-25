@@ -18,9 +18,14 @@ the_text = get_trial_config(trial_config, [stim_position 'Stim'] );
 [duration, min_duration] = set_duration(trial_config, stim_position);
 
 % Draw:
-DrawFormattedText(wind, the_text, 'center', 'center');
+xc = get_trial_config(trial_config, 'StimCenterX', 'center');
+yc = get_trial_config(trial_config, 'StimCenterY', 'center');
+flipx = get_trial_config(trial_config, 'FlipX', 0);
+flipy = get_trial_config(trial_config, 'FlipY', 0);
+DrawFormattedText(wind, the_text, xc, yc, [], [], flipx, flipy);
 Screen('Flip', wind);
 text_start = GetSecs();
+log_msg(['Showing text :' the_text]);
 
 % Wait For KeyPress:
 key_code = check_keypress();
