@@ -82,7 +82,7 @@ ETML knows how to interpret any of the following optional columns (for images, v
 
 * **StimCenterX, StimCenterY** : What position on the screen do you want the stim to be? (E.g., `400,400` puts the center of the 400 pixels below the top of the screen, and 400 pixels rightwards of the left-side of the screen). Default is centered.
 * **FlipX, FlipY** : Mirror the stim? Default no.
-* * **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
+* **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
 
 
 ### Trial / Stimuli Duration
@@ -120,7 +120,7 @@ The options for **"StimDrawFromFolderMethod"** are:
 - **Descending ('desc')** : Pick the filenames within the folder in reverse-alphabetical/numeric order.
 - **Sample Randomly ('sample')** : Randomly sample without replacement. 
   - If number of stimuli is greater than or equal to number of trials, this has obvious behavior: draw from pool of possible stimuli for each trial.
-  - If number of stimuli is less than number of trials, behavior is easiest to explain by example: if there are 10 stimuli, and 20 trials, this will sample without replacement as if there was two of each stimuli. (Number of trials must be an even multiple of number of stimuli.) *By default, this does not allow consecutive presentation of the same stim-item.*
+  - If number of stimuli is less than number of trials, behavior is easiest to explain by example: if there are 10 stimuli, and 20 trials, this will sample without replacement as if there was two of each stimuli. (Number of trials must be an even multiple of number of stimuli.) *By default, this does not allow consecutive presentation of the same stim-item.* Further, if you set the 'ShuffleTrialsInBlock' option, it will preserve this non-consecutive sampling.
 - **Sample Randomly, Allow Consecutive ('sample_consec')** : Same as above, but this *does* allow for consecutive presentation of identical stim-items.
 - **Sample Randomly with Replacement ('sample_replace')** : Randomly sample *with* replacement. 
 
