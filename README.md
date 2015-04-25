@@ -39,7 +39,7 @@ You need to completely customize what happens on each trial, but you want easy m
 
 ### Getting Started
 
-To get started, download this git. The easiest way to get going is simply to copy and paste the "Example" folder, renaming it to your experiment's name.
+To get started, download this git. The easiest way to get going is simply to copy and paste the "Example" folder, renaming it to your experiment's name. Additionally, make sure you add the ETML folder, as well as the 'Functions' subfolder, to the MATLAB search path.
 
 ## Getting Set-Up : Config.txt
 
@@ -62,11 +62,11 @@ Here are the required columns:
 * **Stim** : Path or specification of stimulus. 
 * **StimType** : What kind of stimuli is being presented? Supported options described below.
 
-An ETML experiment is structured heirarchically, where phases are composed of blocks, blocks are composed of trials. If you include optional column **"TrialShuffle"**, you can set this to 1 for a block, and this will shuffle the trials in that block. Similarly for the optional column **"BlockShuffle"**. Leave this option blank on a given trial/block, or set it 0, to *not* shuffle. 
+An ETML experiment is structured heirarchically, where phases are composed of blocks, blocks are composed of trials. If you include optional column **"ShuffleTrialsInBlock"**, you can set this to 1 for a block, and this will shuffle the trials in that block. Similarly for the optional column **"ShuffleBlockssInPhase"**. Leave this option blank on a given trial/block, or set it 0, to *not* shuffle. 
 
 *Note that in the data output from the experiment, 'trial' and 'block' numbers will specify the order these trials/blocks were shown in, not the original number from this stim_config.txt. In other words, the trial number specified in the config.txt is not meaningful on those blocks where 'TrialShuffle' is on (and ditto for blocks and blockshuffle).*
 
-A 'trial' should, for the most part, be thought of as a single stimulus presentation. This makes analysis much easier: each trial has its own image/video, its own interest areas, etc. If you suspect you need multiple stimulus presentations within a given trial, first consider whether these presentations can't simply be split into multiple trials. If not, consider the 'custom trial' described in the later section.
+A 'trial' should, for the most part, be thought of as a single stimulus presentation. This makes analysis much easier: each trial has its own image/video, its own interest areas, etc. However, as decribed below, pre/post stimuli can be added to a trial.
 
 ### StimTypes
 
@@ -75,13 +75,14 @@ There are several stimuli types supported:
 * **Image** : An image or directory of images
 * **Video** : A video or directory of videos (requires GStreamer).
 * **Slideshow** : Identical to image, except images are advanced using arrow keys, and you can go backwards to previous images. Useful for presenting instructions to experiment.
+* **Text** : Display a line of text.
 * **Custom** : A custom script you wrote yourself. Will simply call 'custom_function' on trials with this stim_type. See 'Custom Trials' section below.
 
-ETML knows how to interpret any of the following optional columns (for images and videos):
+ETML knows how to interpret any of the following optional columns (for images, videos, and text):
 
-* **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
 * **StimCenterX, StimCenterY** : What position on the screen do you want the stim to be? (E.g., `400,400` puts the center of the 400 pixels below the top of the screen, and 400 pixels rightwards of the left-side of the screen). Default is centered.
 * **FlipX, FlipY** : Mirror the stim? Default no.
+* * **DimX, DimY** : What dimensions in pixels do you want the stim to have? Default is original dimensions
 
 
 ### Trial / Stimuli Duration
@@ -125,21 +126,18 @@ The options for **"StimDrawFromFolderMethod"** are:
 
 ___
 
-### Text Before and After a Trial:
+### Pre/Post Stimuli
 
 The main focus of a trial is the stimulus being presented. Often, however, we want to ask a question before a stimulus presentation, and/or await a response.
 
-- **BeforeStimText** : Some text you'd like presented before the main stimulus is shown.
-- **BSTDuration** : How long this text should be up. See the 'Trial / Stimuli Duration' section for what information to put here.
-- **AfterStimText** : Some text you'd like presented after the main stimulus is shown.
-- **ASTDuration** : Same as above.
+ETML supports the following columns: **PreStim**, **PreStimType**, **PreStimDuration**, **PostStim**, **PostStimType**, **PostStimDuration**. The options and details for these are identical to those for 'Stim', described above.
 
 These columns can be ommitted or left blank if these are not needed.
 ___
 
-##### Advanced: Looping Through Multiple Messages for Same Stimulus:
+##### Advanced: Looping Through Multiple Pre/Post-Stim for Given Stimulus:
 
-Both of these fields can either accept a single string, or a cell array of strings, e.g., for 'BeforeStimText' you could enter (all on one line):
+PreStim, PostStim, and Stim all should indicate a stim-directory, stim-path, text (for StimType = 'text'), or a cell-array filled with these. For example, for PreStimType = 'text', you could enter (all on one line):
 
 ```
 {"Find the largest object in the following image", 
@@ -147,11 +145,12 @@ Both of these fields can either accept a single string, or a cell array of strin
  "Find the oddball in this image"}
 ``` 
 
-When a cell array like this is supplied, the stimulus in the 'Stim' column will be presented once for EACH of these messages. Similarly, if 'Stim' specifies a folder (not a single file), each image will be shown three times in a row, one for each message. So if you want *all* stim-files in a folder to be shown, make sure your TrialNum column reflects this: for example, for ten images in a folder, and three different 'before' messages, the "TrialNum" column should specify `[1:30]` (3 trials for each of the 10 images). 
+When a cell array like this is supplied, the stimulus in the 'Stim' column will be presented once for EACH of these messages. Similarly, if 'Stim' specifies a folder (not a single file), each image will be shown three times in a row, one for each message. So if you want *all* stim-files in a folder to be shown, make sure your TrialNum column reflects this: for example, for ten images in a folder, and three different 'before' messages, the "TrialNum" column should specify `[1:30]` (3 trials for each of the 10 images). The idea behind this method of pairing is to follow a common study design: you may want to ask multiple questions of the same image. 
 
-You can also randomly sample from these question/stim-item pairings with the options described in the previous section ('Method of Drawing Stim from Folder'). One useful option is the non-consecutive option: randomly select an stim-item and a question to show before/after it, with the constraint that the same stim-item can't be shown twice in a row.
+In contrast, PreStim and PostStim are assumed to be matched: e.g., if one is a cell array of length three, the other must be length three as well. Again, this is to follow the common study design of (1) telling the participant what they will be asked, (2) showing stimuli, (3) asking them about what they saw. In other words, it's assumed that (1) and (3) go together (e.g., "you will be asked about X"; [image]; "here's a question about X").
 
-BeforeStimText and AfterStimText must match: if one is a cell array of length three, the other must be too. If you'd like to change the before text with a cell array but always have the same after text, you could just make the after text a cell array with the same item in each cell.
+You can also randomly sample from these question/stim-item pairings with the options described in the previous section ('Method of Drawing Stim from Folder'). One useful option is the non-consecutive option: randomly select a stim-item and a question to show before/after it, with the constraint that the same stim-item can't be shown twice in a row.
+
 ___
 
 
