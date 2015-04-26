@@ -64,7 +64,7 @@ Here are the required columns:
 
 An ETML experiment is structured heirarchically, where phases are composed of blocks, blocks are composed of trials. If you include optional column **"ShuffleTrialsInBlock"**, you can set this to 1 for a block, and this will shuffle the trials in that block. Similarly for the optional column **"ShuffleBlockssInPhase"**. Leave this option blank on a given trial/block, or set it 0, to *not* shuffle. 
 
-*Note that, by default, **ShuffleTrialsInBlock**  will prevent a given stimuli from being shown on two consecutive trials (e.g., if you are looping over the contents of a folder several times). If you don't want this behavior, enter `allow_consec` for ShuffleTrialsInBlock, instead of `1`.*
+_Note that, by default, **ShuffleTrialsInBlock**  will prevent a given stimuli from being shown on two consecutive trials (e.g., if you are looping over the contents of a folder several times). If you don't want this behavior, enter `allow_consec` for ShuffleTrialsInBlock, instead of `1`._
 
 *Note that in the data output from the experiment, 'trial' and 'block' numbers will specify the order these trials/blocks were shown in, not the original number from this stim_config.txt. In other words, the trial number specified in the config.txt is not meaningful on those blocks where 'TrialShuffle' is on (and ditto for blocks and blockshuffle).*
 
