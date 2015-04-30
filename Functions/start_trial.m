@@ -1,5 +1,5 @@
 %% FXN_start_trial
-function start_trial(trial_index, block_index, trial_config)
+function [trial_start_time] = start_trial(trial_index, block_index, trial_config)
 
 global session
 
@@ -11,6 +11,7 @@ if session.record_phases(trial_config.('PhaseNum'));
         '_BLOCK_',                 num2str(block_index),...
         '_TRIAL_',                 num2str(trial_index)]);
 end
+trial_start_time = GetSecs(); % for ET trials, this is the zero point on the eyelink clock
 
 %
 add_data('TrialNum', trial_index);

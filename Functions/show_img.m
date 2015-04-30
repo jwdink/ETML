@@ -1,5 +1,5 @@
 %% FXN_show_img
-function [new_trial_index, key_summary] = show_img (wind, trial_index, trial_config, GL, stim_position, key_summary)
+function [new_trial_index, key_summary] = show_img (wind, trial_index, trial_config, GL, stim_position, key_summary, trial_start_time)
 
 global session
 
@@ -43,6 +43,10 @@ while KbCheck; end; % if keypress from prev slide is still happening, we wait ti
 log_msg( sprintf('Displaying Image: %s', stim_path) );
 img_start_clock = clock;
 image_start = GetSecs();
+if ~isnan(trial_start_time)
+    add_data('StimStartMS', (image_start - trial_start_time)*1000 );
+end
+
 Screen('Flip', wind);
 
 close_image = 0;
@@ -82,6 +86,11 @@ while ~close_image
     end
     
     
+end
+
+log_msg('Done showing image'); 
+if ~isnan(trial_start_time)
+    add_data('StimStopMS', (GetSecs() - trial_start_time)*1000 );
 end
 
 % Stop Time:

@@ -174,17 +174,28 @@ ___
 
 ## Getting the Data
 
+### Session Data
+
 Included in this package is an R script that takes a folder of session files, and turns them into a DataFrame in R.
 
 *[This section a work in progress. Using the convert_session_files function should be relatively straightforward, however.]*
+
+### Eye-Tracker Data
+
+You can get data from the EDF files, just like any other Eyelink experiment, using Dataviewer. Note that there are two types of timestamps recorded into the data:
+
+(1) Eyelink records the timestamps for eye-events (saccades, fixations, etc.) in the form of "milliseconds since beginning of trial". For easy analysis related to these eye-events, ETML will output a "StimStartMS" and "StipStopMS" column. When exporting a Fixation-Report or Saccade-Report, make sure you include these columns.
+
+(2) Everything else in ETML is timestamped by the system-time. This includes messages logged to the session file, the "StimStartTimestamp" and "StimStopTimestamp", and any information about keypresses.
+
 
 # To Do:
 
 - [ ] Doc-style commenting for all functions
 - [ ] More transparent syntax for check_keypress key summary
-- [ ] Finish this readme
-- [x] More flexible support for cell arrays of stim-names in stim_config.txt
-- [x] Support for any before/after stim (not just text)
+- [ ] Add to ReadMe: gettin session data
+- [ ] Add to ReadMe: getting eye-tracker data from DataViewer
+- [ ] Add script for common pre-processing steps in R
 
 
 

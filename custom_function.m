@@ -1,5 +1,5 @@
 function [ new_trial_index, out_struct, key_summary ] = ...
-    custom_function(wind, trial_index, trial_config, out_struct, GL, key_summary) 
+    custom_function(wind, trial_index, trial_config, out_struct, GL, key_summary, trial_start_time) 
 %CUSTOM_FUNCTION Run a custom trial within an ETML experiment
 %   [new_trial_index, out_struct = custom_function(wind, trial_index, trial_config, out_struct) 
 %   runs a custom script, which can be specific to each experiment. Simply

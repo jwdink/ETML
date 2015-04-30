@@ -1,5 +1,5 @@
 %% FXN_show_vid
-function [new_trial_index, key_summary] = show_vid(wind, trial_index, trial_config, GL, stim_position, key_summary)
+function [new_trial_index, key_summary] = show_vid(wind, trial_index, trial_config, GL, stim_position, key_summary, trial_start_time)
 
 global session
 
@@ -40,9 +40,13 @@ Screen('PlayMovie', movie , mov_rate);
 WaitSecs(.10);
 Screen('SetMovieTimeIndex', movie, 0);
 
+vid_start = GetSecs();
+if ~isnan(trial_start_time)
+    add_data('StimStartMS', (vid_start - trial_start_time)*1000 );
+end
 log_msg( sprintf('Playing Video: %s', trial_config.([stim_position 'Stim'])) );
 vid_start_clock = clock;
-vid_start = GetSecs();
+
 
 key_code = check_keypress();
 while 1
@@ -75,14 +79,17 @@ dropped_frames = Screen('PlayMovie',  movie, 0);
 log_msg( sprintf('Dropped frames: %d', dropped_frames) );
 Screen('CloseMovie', movie);
 Screen('Flip', wind);
-log_msg('Video is over.');
+log_msg('Done showing video');
+if ~isnan(trial_start_time)
+    add_data('StimStopMS', (vid_start - trial_start_time)*1000 );
+end
 
-% Stop Time:
+% Stop Clock Time:
 vid_stop_clock = clock;
 vid_stop_clock_str = time_to_timestamp(vid_stop_clock);
 add_data('StimStopTimestamp', vid_stop_clock_str);
 
-% Start Time:
+% Start Clock Time:
 vid_start_clock_str = time_to_timestamp(vid_start_clock);
 add_data('StimStartTimestamp', vid_start_clock_str);
 

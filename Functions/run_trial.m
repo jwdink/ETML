@@ -1,4 +1,4 @@
-function [new_trial_index, out_struct, key_summary] = run_trial (wind, trial_index, trial_config, out_struct, GL)
+function [new_trial_index, out_struct, key_summary] = run_trial (wind, trial_index, trial_config, out_struct, GL, trial_start_time)
 
 global session
 
@@ -26,7 +26,7 @@ end
 % Show Main-Stim:
 stim_type = lower( get_trial_config(trial_config, 'StimType') );
 [new_trial_index, out_struct, key_summary] = ...
-    show_stim(wind, stim_type, trial_index, trial_config, out_struct, GL, '', key_summary);
+    show_stim(wind, stim_type, trial_index, trial_config, out_struct, GL, '', key_summary, trial_start_time);
 
 
 % Show Post-Stim:
@@ -48,36 +48,41 @@ return
 
 %%
     function [new_trial_index, out_struct, key_summary] = ...
-            show_stim(wind, stim_type, trial_index, trial_config, out_struct, GL, stim_position, key_summary)
+            show_stim(wind, stim_type, trial_index, trial_config, out_struct, GL, stim_position, key_summary, trial_start_time)
+        
+        if nargin < 9
+            trial_start_time = NaN;
+        end
         
         if any( strcmpi( stim_type , {'image', 'img', 'slideshow'} ) )
             
             % Image:
             [new_trial_index, key_summary] = ...
-                show_img(wind, trial_index, trial_config, GL, stim_position, key_summary);
+                show_img(wind, trial_index, trial_config, GL, stim_position, key_summary, trial_start_time);
             
         elseif strcmpi(stim_type, 'video')
             
             % Video:
             [new_trial_index, key_summary] = ...
-                show_vid(wind, trial_index, trial_config, GL, stim_position, key_summary);
+                show_vid(wind, trial_index, trial_config, GL, stim_position, key_summary, trial_start_time);
             
         elseif strcmpi(stim_type, 'fixation')
             
+            % Fixation Cross:
             show_fixation_cross(wind)
             new_trial_index = trial_index + 1;
             
         elseif strcmpi(stim_type, 'text')
             
             % Text:
-            key_summary = show_text(wind, trial_config, stim_position, key_summary);
+            key_summary = show_text(wind, trial_config, stim_position, key_summary, trial_start_time);
             new_trial_index = trial_index + 1;
             
         elseif strcmpi(stim_type, 'custom')
             
             % Custom Script:
             [new_trial_index, out_struct, key_summary] =...
-                custom_function(wind, trial_index, trial_config, out_struct, key_summary);
+                custom_function(wind, trial_index, trial_config, out_struct, key_summary, trial_start_time);
             
         else
             errmsg = ['StimType "' stim_type '" is unsupported.'];

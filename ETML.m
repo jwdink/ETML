@@ -325,14 +325,14 @@ try
                 check_trial(this_trial_row, trial_record_path)
                 
                 %% Run Trial:
-                start_trial(trial_index, block_index, stim_config_full(this_trial_row));
+                trial_start_time = start_trial(trial_index, block_index, stim_config_full(this_trial_row));
                 
                 if ~exist('out_struct', 'var')
                     out_struct = struct();
                 end
                 
                 [new_trial_index, out_struct, key_summary] = run_trial( ...
-                    wind, trial_index , stim_config_full(this_trial_row), out_struct, GL);
+                    wind, trial_index , stim_config_full(this_trial_row), out_struct, GL, trial_start_time);
 
                 stop_trial(trial_index, block_index, stim_config_full(this_trial_row), key_summary);
                 %%%

@@ -1,5 +1,5 @@
 %% FXN_show_text
-function key_summary = show_text(wind, trial_config, stim_position, key_summary)
+function key_summary = show_text(wind, trial_config, stim_position, key_summary, trial_start_time)
 
 global session
 
@@ -35,6 +35,9 @@ DrawFormattedText(wind, the_text, xc, yc, [], [], flipx, flipy);
 Screen('Flip', wind);
 text_start = GetSecs();
 log_msg(['Showing text : ' regexprep(the_text,'[^a-zA-Z]',' ')]); % escape special characters
+if ~isnan(trial_start_time)
+    add_data('StimStartMS', (text_start - trial_start_time)*1000 );
+end
 
 % Wait For KeyPress:
 key_code = check_keypress();
@@ -52,6 +55,11 @@ while 1
     end
 end
 
+
+log_msg('Done showing text'); 
+if ~isnan(trial_start_time)
+    add_data('StimStopMS', (GetSecs() - trial_start_time)*1000 );
+end
 [~, key_summary] = check_keypress(key_code, key_summary, 'flush');
 
 return

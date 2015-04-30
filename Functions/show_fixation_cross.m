@@ -15,7 +15,7 @@ end
 imgmat = make_cross(dim, [0 0 0]);
 dest_rect = CenterRect([0 0 dim dim], session.win_rect);
 
-log_msg('Showing Fixation Cross');
+log_msg('Showing fixation cross');
 fix_start = GetSecs();
 while 1
     tex = Screen('MakeTexture', wind, imgmat);
@@ -31,6 +31,7 @@ while 1
     end
     %%%%
 end
+log_msg('Done showing fixation cross');
 
 end
 
