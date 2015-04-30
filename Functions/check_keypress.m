@@ -1,5 +1,5 @@
 %% FXN_check_keypress
-function [key_code, key_summary] = check_keypress (last_key_code, key_summary, trialend)
+function [key_code, key_summary] = check_keypress (last_key_code, key_summary, flush_keys)
 global session
 
 % This function is not optimized for speed, since it depends on log_msg and session.
@@ -8,27 +8,23 @@ global session
 if nargin < 1 || isempty(last_key_code)
     last_key_code = zeros(1,256);
 end
-if nargin < 2
+if nargin < 2 || isempty(key_summary)
     key_summary = [];
+    trial_start_time = NaN;
 else
-    timestamp = clock;
-end
-if isempty(key_summary)
-    if isstruct(key_summary)
-        key_summary.null = 'null'; % checks below depend on empty vs. nonempty struct
-    else
-        key_summary = [];
-    end
+    trial_start_time = key_summary.trial_start_time;
 end
 if nargin < 3
-    trialend = 0;
+    flush_keys = 0;
 end
 
 [~,~,key_code] = KbCheck();
 
-if trialend
+if flush_keys
     key_code = zeros(1,256);
 end
+
+keys_of_interest = session.keys_of_interest; 
 
 % log keys:
 key_code_diff = key_code - last_key_code;
@@ -38,6 +34,7 @@ key_code_diff = key_code - last_key_code;
 released_keys = find(key_code_diff < 0);
 pressed_keys  = find(key_code_diff > 0);
 
+% KEY PRESSED:
 for i = 1:length(pressed_keys)
     % Log:
     pressed_key_name = KbName(pressed_keys(i));
@@ -45,18 +42,23 @@ for i = 1:length(pressed_keys)
     
     % Remember in struct:
     if ~isempty(key_summary)
-        if any( strcmpi(pressed_key_name, session.keys_of_interest) )
+        if any( strcmpi(pressed_key_name, keys_of_interest) )
             if any( strcmpi(pressed_key_name, fieldnames(key_summary) ) )
-                key_summary.(pressed_key_name){1} = key_summary.(pressed_key_name){1} + 1; % increment press count
-                key_summary.(pressed_key_name){4} = timestamp; % this is the 'last' keypress
+                % this has been pressed before
+                key_summary.(pressed_key_name).count = key_summary.(pressed_key_name).count + 1;
+                key_summary.(pressed_key_name).last_pressed_ts = (GetSecs() - trial_start_time)*1000;
             else
-                key_summary.(pressed_key_name) = {1 0 timestamp timestamp};
-            end                             % count, cumulative time, first_pressed_time, last_pressed_time
+                % this is the first time it's been pressed
+                ts = (GetSecs() - trial_start_time)*1000;
+                key_summary.(pressed_key_name) = ...
+                    struct('count', 1, 'cumu_time', 0, 'first_pressed_ts', ts, 'last_pressed_ts', ts);
+            end                             
         end
     end
     
 end
 
+% KEY RELEASED:
 for i = 1:length(released_keys)
     % Log:
     released_key_name = KbName(released_keys(i));
@@ -64,12 +66,14 @@ for i = 1:length(released_keys)
     
     % Remember in struct:
     if ~isempty(key_summary)
-        if any( strcmpi(released_key_name, session.keys_of_interest) )
+        if any( strcmpi(released_key_name, keys_of_interest) )
             if any( strcmpi(released_key_name, fieldnames(key_summary) ) )
-                key_summary.(released_key_name){2} = key_summary.(released_key_name){2} +...
-                    etime(timestamp, key_summary.(released_key_name){4});
+                ts = (GetSecs() - trial_start_time)*1000;
+                key_summary.(released_key_name).cumu_time = key_summary.(released_key_name).cumu_time +...
+                    (ts - key_summary.(released_key_name).last_pressed_ts);
                         % cumu-time = cumu-time + (current-timestamp - last-timestamp)
             else
+                log_msg('Unmatched keypress');
                 warning('Unmatched keypress'); %#ok<WNTAG>
             end
         end

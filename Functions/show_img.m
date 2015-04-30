@@ -41,7 +41,7 @@ save_img_for_dv(trial_index, trial_config);
 
 while KbCheck; end; % if keypress from prev slide is still happening, we wait til its over
 log_msg( sprintf('Displaying Image: %s', stim_path) );
-img_start_clock = clock;
+
 image_start = GetSecs();
 if ~isnan(trial_start_time)
     add_data('StimStartMS', (image_start - trial_start_time)*1000 );
@@ -93,16 +93,6 @@ if ~isnan(trial_start_time)
     add_data('StimStopMS', (GetSecs() - trial_start_time)*1000 );
 end
 
-% Stop Time:
-img_stop_clock = clock;
-img_stop_clock_str = time_to_timestamp(img_stop_clock);
-add_data('StimStopTimestamp', img_stop_clock_str);
-
-% Start Time:
-img_start_clock_str = time_to_timestamp(img_start_clock);
-add_data('StimStartTimestamp', img_start_clock_str);
-
-% KB:
 [~, key_summary] = check_keypress(key_code, key_summary, 'flush'); % flush currently pressed keys
 
 %

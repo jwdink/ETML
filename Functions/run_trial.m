@@ -9,6 +9,9 @@ else
     key_summary = struct(); % will be populated
 end
 
+% Add Trial Start to Keypress Summary, for Key Timestamp calculations:
+key_summary.trial_start_time = trial_start_time;
+
 
 % Show Pre-Stim:
 pre_stim_type = lower( get_trial_config(trial_config, 'PreStimType') );

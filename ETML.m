@@ -113,7 +113,7 @@ try
     if isempty(session.skip_comments); session.skip_comments = 0; end;
     
     % Keys of Interest:
-    session.keys_of_interest = eval_field( get_config('KeysOfInterest') );
+    session.keys_of_interest = eval_field( get_config('KeysOfInterest','{}') );
     
     % Wait for experimenter to press Enter to begin
     disp(upper(sprintf('\n\n********Press any key to launch the experiment window********\n\n')));

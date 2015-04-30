@@ -45,7 +45,6 @@ if ~isnan(trial_start_time)
     add_data('StimStartMS', (vid_start - trial_start_time)*1000 );
 end
 log_msg( sprintf('Playing Video: %s', trial_config.([stim_position 'Stim'])) );
-vid_start_clock = clock;
 
 
 key_code = check_keypress();
@@ -83,15 +82,6 @@ log_msg('Done showing video');
 if ~isnan(trial_start_time)
     add_data('StimStopMS', (vid_start - trial_start_time)*1000 );
 end
-
-% Stop Clock Time:
-vid_stop_clock = clock;
-vid_stop_clock_str = time_to_timestamp(vid_stop_clock);
-add_data('StimStopTimestamp', vid_stop_clock_str);
-
-% Start Clock Time:
-vid_start_clock_str = time_to_timestamp(vid_start_clock);
-add_data('StimStartTimestamp', vid_start_clock_str);
 
 % KB:
 [~, key_summary] = check_keypress(key_code, key_summary, 'flush'); % flush currently pressed keys

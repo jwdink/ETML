@@ -182,11 +182,17 @@ Included in this package is an R script that takes a folder of session files, an
 
 ### Eye-Tracker Data
 
-You can get data from the EDF files, just like any other Eyelink experiment, using Dataviewer. Note that there are two types of timestamps recorded into the data:
+You can get data from the EDF files, just like any other Eyelink experiment, using Dataviewer. Note that all timestamps--both those made by EyeLink for gaze data, and those made by ETML for keypresses, stim-presentaiton, etc.--are relative to the beginning of the recording on that trial. The columns 'StimStartMS' and 'StimStopMS' should therefore allow you to easily derive a 'TimeInTrial' column. For example, in R:
 
-(1) Eyelink records the timestamps for eye-events (saccades, fixations, etc.) in the form of "milliseconds since beginning of trial". For easy analysis related to these eye-events, ETML will output a "StimStartMS" and "StipStopMS" column. When exporting a Fixation-Report or Saccade-Report, make sure you include these columns.
-
-(2) Everything else in ETML is timestamped by the system-time. This includes messages logged to the session file, the "StimStartTimestamp" and "StimStopTimestamp", and any information about keypresses.
+```
+library('dplyr')
+df = read.delim("./fixation_report.txt") # data you got from Eyelink DataViewer
+df_clean = df %>%
+    group_by(RECORDING_SESSION_LABEL, TRIAL_INDEX) %>%
+    mutate(CurrentFixStartTime = CURRENT_FIX_START - StimStartMS,           # make new columns for stim-start-adjusted timestamp
+           CurrentFixEndTime   = CURRENT_FIX_END   - StimStartMS ) %>%
+    filter(CURRENT_FIX_START > StimStartMS, CURRENT_FIX_START < StimStopMS) # filter out everything before and after stim presentation
+```
 
 
 # To Do:

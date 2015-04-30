@@ -8,15 +8,17 @@ if ~isempty(key_summary)
     ks_fnames = fieldnames(key_summary);
     for f = 1:length(ks_fnames)
         field = ks_fnames{f};
-        this_key_summary = key_summary.(field);
-        
-        % Count, CumuTime:
-        add_data(['Key_' upper(field) '_PressCount'], num2str(this_key_summary{1}) );
-        add_data(['Key_' upper(field) '_CumuPress'], num2str(this_key_summary{2})  );
-        
-        % First Press:
-        add_data(['Key_' upper(field) '_FirstPressTimestamp'], time_to_timestamp(this_key_summary{3}) );
-        add_data(['Key_' upper(field) '_LastPressTimestamp'], time_to_timestamp(this_key_summary{4}) );
+        if ~strcmpi(field, 'trial_start_time')
+            this_key_summary = key_summary.(field);
+            
+            % Count, CumuTime:
+            add_data(['Key_' upper(field) '_PressCount'], this_key_summary.count );
+            add_data(['Key_' upper(field) '_CumuPress'], this_key_summary.cumu_time  );
+            
+            % First Press:
+            add_data(['Key_' upper(field) '_FirstPressTimestamp'], this_key_summary.first_pressed_ts );
+            add_data(['Key_' upper(field) '_LastPressTimestamp'],  this_key_summary.last_pressed_ts );
+        end
     end
 end
 
