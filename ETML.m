@@ -64,7 +64,10 @@ try
         if ~session.debug_mode
             % no session info was added on call, ask for the basics:
             session.experimenter = input('Enter your (experimenter) initials: ','s');
-            session.subject_code = input('Enter subject code: ', 's');
+            session.subject_code = input('Enter subject code (no longer than 8 chars): ', 's');
+            if length(session.subject_code) > 8
+                error('Subject code must be no longer than eight characters, or Eyelink will fail.')
+            end
             session.condition = str2double( input('Enter condition: ', 's') );
         end
     else 
@@ -341,11 +344,19 @@ try
     
     
 catch exp_err
-        
-    log_msg(exp_err.message);
-    log_msg(num2str([exp_err.stack.line]));
     
     sca;
+    
+    if strcmpi(exp_err.message, 'Experiment Ended.')
+        log_msg(exp_err.message)
+    else
+        log_msg('=======ERROR======')
+        log_msg(exp_err.message);
+        log_msg('ON LINE:')
+        log_msg(num2str([exp_err.stack.line]));
+        log_msg('(Last number indicates position in ETML.m)');
+        log_msg('==================');
+    end
     
     if ~strcmpi('Experiment Ended.' , exp_err.message) && ~session.debug_mode
         h= msgbox({'Experiment has encountered an error and shut down.'...
