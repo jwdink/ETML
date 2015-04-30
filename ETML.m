@@ -277,6 +277,10 @@ try
         
         block_index = 0;
         while block_index < length(blocks)
+            if block_index == 0 && this_phase == 2
+                disp('')
+            end
+       
             % Get BlockNum:
             % block index is order of presentation
             % this_block is original block numbering from stim config
@@ -298,7 +302,7 @@ try
             end
             
             new_trial_index = 1;
-            trial_index = 1;
+            trial_index = 0;
             while trial_index < length(trials)
                 % Update Trial Index:
                 trial_index = new_trial_index; % this gets sent to ET data, session file, and log
