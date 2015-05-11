@@ -22,7 +22,7 @@ else
 end
 
 % Check if ETML was called with custom run info (e.g., subject number, age, etc.):
-if nargin < 1
+if nargin < 2
     session_info = [];
 end
 
