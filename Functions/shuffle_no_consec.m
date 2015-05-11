@@ -17,9 +17,9 @@ end
 % Draw each trial from the pool of trials, with the contstraint that a given stim cannot
 % appear twice in a row.
 
+attempt_start = GetSecs();
 while 1
     failed = 0;
-    attempt_start = GetSecs();
     trials_shuffled2 = NaN(1,length(trials_shuffled1));
     stim_pool = stim_hashes;
     trials_pool = trials_shuffled1;

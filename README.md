@@ -64,7 +64,7 @@ Here are the required columns:
 
 An ETML experiment is structured heirarchically, where phases are composed of blocks, blocks are composed of trials. If you include optional column **"ShuffleTrialsInBlock"**, you can set this to 1 for a block, and this will shuffle the trials in that block. Similarly for the optional column **"ShuffleBlockssInPhase"**. Leave this option blank on a given trial/block, or set it 0, to *not* shuffle. 
 
-_Note that, by default, **ShuffleTrialsInBlock**  will prevent a given stimuli from being shown on two consecutive trials (e.g., if you are looping over the contents of a folder several times). If you don't want this behavior, enter `allow_consec` for ShuffleTrialsInBlock, instead of `1`._
+If your block is set up with multiple trials that have the same stimulus (e.g., 30 trials for 10 different images), one useful option is to set 'ShuffleTrialsInBlock' to `no_consec` (instead of `1`), which will prevent the same stimulus from being presented on two trials in a row.
 
 *Note that in the data output from the experiment, 'trial' and 'block' numbers will specify the order these trials/blocks were shown in, not the original number from this stim_config.txt. In other words, the trial number specified in the config.txt is not meaningful on those blocks where 'TrialShuffle' is on (and ditto for blocks and blockshuffle).*
 
@@ -150,7 +150,7 @@ When a cell array like this is supplied, the stimulus in the 'Stim' column will 
 
 In contrast, PreStim and PostStim are assumed to be matched: e.g., if one is a cell array of length three, the other must be length three as well. Again, this is to follow the common study design of (1) telling the participant what they will be asked, (2) showing stimuli, (3) asking them about what they saw. In other words, it's assumed that (1) and (3) go together (e.g., "you will be asked about X"; [image]; "here's a question about X").
 
-You can also randomly sample from these question/stim-item pairings with the options described in the previous section ('ShuffleTrialsInBlock'). One useful option is the (default) non-consecutive option: randomly select a stim-item and a question to show before/after it, with the constraint that the same stim-item can't be shown twice in a row.
+You can also randomly sample from these question/stim-item pairings with the options described in the previous section ('ShuffleTrialsInBlock'). One useful option is the non-consecutive option: randomly select a stim-item and a question to show before/after it, with the constraint that the same stim-item can't be shown twice in a row.
 
 ___
 

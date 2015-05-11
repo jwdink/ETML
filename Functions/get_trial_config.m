@@ -21,7 +21,7 @@ else
                 'ShuffleBlocksInPhase', 'ShuffleTrialsInBlock'}
             out = 0;
             
-        case {'PreStim', 'PostStim', 'PreStimType', 'PostStimType'}
+        case {'PreStim', 'PostStim', 'PreStimType', 'PostStimType', 'Stim'}
             out = '';
             
         otherwise

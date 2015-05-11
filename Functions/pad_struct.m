@@ -9,7 +9,7 @@ struct = config_struct;
 struct = pad_col('Condition' ,struct);
 struct = pad_col('PhaseNum'  ,struct);
 struct = pad_col('BlockNum'  ,struct);
-struct = pad_trial_col(struct);
+ struct = pad_trial_col(struct);
 
 %WriteStructsToText('foo.txt', struct);
 
