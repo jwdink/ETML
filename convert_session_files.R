@@ -9,17 +9,17 @@ convert_session_files = function(path,
                                  overwrite_conflict_function = NULL,
                                  echo=TRUE) {
   require("stringr")
-  require("plyr") # for rbind.fill
+  require("dplyr") # for bind_rows
   
   df = data.frame(stringsAsFactors= FALSE)
   
   files = list.files(path= path, pattern=".txt", all.files= TRUE, full.names= TRUE)
+  if (length(files)==0) stop("Directory was empty!")
   for (file in files){
-    if(echo) cat(sprintf("Processing file: %s\n", file))
+    if(echo) cat(sprintf("\nProcessing file: %s", file))
     
     # read in the raw data file
     df_session = read.table(file, sep= "\t", header= FALSE, col.names = c('Key', 'Value'), stringsAsFactors= FALSE)
-    df_session = df_session[2:nrow(df_session),]
     
     # Make Queue:
     this_row_is_new = FALSE
@@ -55,7 +55,7 @@ convert_session_files = function(path,
         
         if (this_row_is_new) {
           # new? in that case, we can append the row queue to the df, flush it.
-          df = rbind.fill(df, the_row_queue)
+          df = bind_rows(df, the_row_queue)
           the_row_queue = this_row
           rq_identifiers = as.list( the_row_queue[,identifier_colnames] )
           
@@ -66,7 +66,7 @@ convert_session_files = function(path,
           this_row_is_new = FALSE
         } else {
           # not new? merge into a single row_queue
-          the_row_queue = merge_rows(the_row_queue, this_row)
+          the_row_queue = merge_rows(the_row_queue, this_row, overwrite_conflict_function)
           if (all( identifier_colnames %in% colnames(the_row_queue) )) {
             rq_identifiers = as.list( the_row_queue[,identifier_colnames] )
           }
@@ -101,6 +101,14 @@ convert_session_files = function(path,
       }
       
     } # /loop thru rows
+    
+    if (this_row_is_new) {
+      df = bind_rows(df, the_row_queue, this_row)
+    } else {
+      # not new? merge into a single row_queue
+      the_row_queue = merge_rows(the_row_queue, this_row, overwrite_conflict_function)
+      df = bind_rows(df, the_row_queue)
+    }
     # /loop thru files
   }
   
@@ -136,7 +144,7 @@ merge_element = function(column, col, overwrite_conflict_function) {
   
   if (is.null(overwrite_conflict_function)) {
     warning(paste0("\nOverwrite in ouptut-column / session-key '", col, "'. Consider diff advance_str or specify overwrite_function.") )
-    return( paste(temp_row[1,df_session_row$Key], df_session_row$Value, sep = "; ") )
+    return( paste(column, collapse = "; ") )
   } else {
     return( overwrite_conflict_function(column[1], column[2], col) )
   }
