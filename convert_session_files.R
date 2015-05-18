@@ -9,7 +9,7 @@ convert_session_files = function(path,
                                  overwrite_conflict_function = NULL,
                                  echo=TRUE) {
   require("stringr")
-  require("dplyr") # for bind_rows
+  require("plyr") # for bind_rows
   
   df = data.frame(stringsAsFactors= FALSE)
   
@@ -55,7 +55,7 @@ convert_session_files = function(path,
         
         if (this_row_is_new) {
           # new? in that case, we can append the row queue to the df, flush it.
-          df = bind_rows(df, the_row_queue)
+          df = rbind.fill(df, the_row_queue)
           the_row_queue = this_row
           rq_identifiers = as.list( the_row_queue[,identifier_colnames] )
           
@@ -103,11 +103,11 @@ convert_session_files = function(path,
     } # /loop thru rows
     
     if (this_row_is_new) {
-      df = bind_rows(df, the_row_queue, this_row)
+      df = rbind.fill(df, the_row_queue, this_row)
     } else {
       # not new? merge into a single row_queue
       the_row_queue = merge_rows(the_row_queue, this_row, overwrite_conflict_function)
-      df = bind_rows(df, the_row_queue)
+      df = rbind.fill(df, the_row_queue)
     }
     # /loop thru files
   }
