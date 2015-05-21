@@ -114,6 +114,7 @@ if isempty(session.skip_comments); session.skip_comments = 0; end;
 
 % Keys of Interest:
 session.keys_of_interest = eval_field( get_config('KeysOfInterest','{}') );
+KbName('UnifyKeyNames');
 
 % Wait for experimenter to press Enter to begin
 disp(upper(sprintf('\n\n********Press any key to launch the experiment window********\n\n')));
@@ -192,7 +193,7 @@ try
         % in a structure that also contains useful defaults
         % and control codes (e.g. tracker state bit and Eyelink key values).
         el = EyelinkInitDefaults(wind);
-        %el.backgroundcolour = session.background_color; % might as well make things consistent
+        el.backgroundcolour = session.background_color; % might as well make things consistent
         
         priorityLevel = MaxPriority(wind);
         Priority(priorityLevel);

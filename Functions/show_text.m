@@ -12,6 +12,7 @@ if nargin < 4
 end
 
 while KbCheck; end;
+bg_col = session.background_color;
 
 % Keys of Interest:
 if ~isempty(session.keys_of_interest)
@@ -31,6 +32,7 @@ xc = get_trial_config(trial_config, 'StimCenterX', 'center');
 yc = get_trial_config(trial_config, 'StimCenterY', 'center');
 flipx = get_trial_config(trial_config, 'FlipX', 0);
 flipy = get_trial_config(trial_config, 'FlipY', 0);
+Screen('FillRect', wind, bg_col);
 DrawFormattedText(wind, the_text, xc, yc, [], [], flipx, flipy);
 Screen('Flip', wind);
 text_start = GetSecs();

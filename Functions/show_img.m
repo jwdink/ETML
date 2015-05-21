@@ -11,6 +11,7 @@ if nargin < 6
 end
 
 while KbCheck; end;
+bg_col = session.background_color;
 
 % Keys of Interest:
 if ~isempty(session.keys_of_interest)
@@ -33,6 +34,7 @@ else
 end
 
 % Get image:
+Screen('FillRect', wind, bg_col);
 image = imread(stim_path);                                      % read in image file
 tex = Screen('MakeTexture', wind, image, [], [], [], 1);        % make texture
 draw_tex(wind, tex, trial_index, trial_config, GL, win_rect, 'save_stim_info'); % draw

@@ -11,6 +11,7 @@ if nargin < 6
 end
 
 while KbCheck; end;
+bg_col = session.background_color;
 
 % Keys of Interest:
 if ~isempty(session.keys_of_interest)
@@ -66,6 +67,7 @@ while 1
     
     % If texture is available, draw and Flip to screen:
     if  tex > 0
+        Screen('FillRect', wind, bg_col);
         draw_tex(wind, tex, trial_index, trial_config, GL, win_rect);
         Screen('Close', tex );
         Screen('Flip',wind, [], 0);
