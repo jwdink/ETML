@@ -149,7 +149,7 @@ try
     end
     
     % Create window
-    session.background_color = repmat( get_config('BackgroundColor', 125) , 1, 3); % default gray
+    session.background_color = repmat( get_config('BackgroundColor', 80) , 1, 3); % default gray
     resolution = eval(get_config('ScreenRes', '1024,768'));
     if session.debug_mode
         refresh_rate = [];
@@ -192,21 +192,14 @@ try
         % in a structure that also contains useful defaults
         % and control codes (e.g. tracker state bit and Eyelink key values).
         el = EyelinkInitDefaults(wind);
-        el.backgroundcolour = session.background_color; % might as well make things consistent
+        %el.backgroundcolour = session.background_color; % might as well make things consistent
         
         priorityLevel = MaxPriority(wind);
         Priority(priorityLevel);
         
         % Initialization of the connection with the Eyelink Gazetracker.
-        % exit program if this fails.
-        % This is where the eyetracker is set to dummy-mode, if that option was
-        % selected
-        DrawFormattedText(wind, ['If you''re seeing this for a while, ET might'...
-            ' not be connected. Press enter to continue.'], 'center', 'center');
-        Screen('Flip', wind);
-        
-        if ~EyelinkInit(get_config('DummyMode'), 1)
-            error(sprintf('Eyelink Init failed.\n')); %#ok<SPERR>
+        if ~eyelink_init(get_config('DummyMode'), 1)
+            error('Eyelink Init failed.'); 
         end
         
         [~, vs] = Eyelink('GetTrackerVersion');
@@ -235,15 +228,18 @@ try
         Eyelink('command', 'link_sample_data  = LEFT,RIGHT,GAZE,GAZERES,AREA,STATUS');
         
     catch err
-        % Just give warning message if unable to connect to ET
-        warning(err.message)
-        log_msg(err.message)
-        el = struct();
-        
-        DrawFormattedText(wind, 'Unable to connect to Eyelink system. Press any key to continue', 'center', 'center');
-        Screen('Flip', wind);
-        while KbCheck; end;
-        KbWait;
+        if session.dummy_mode
+            warning(err.message)
+            log_msg(err.message)
+            el = struct();
+            
+            DrawFormattedText(wind, 'Unable to connect to Eyelink system. Press any key to continue', 'center', 'center');
+            Screen('Flip', wind);
+            while KbCheck; end;
+            KbWait;
+        else
+            error(err.message)
+        end
         
     end
     
