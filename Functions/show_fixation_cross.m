@@ -1,6 +1,7 @@
 function show_fixation_cross(wind, dim, fix_time, pre_delay)
 %%
 global session
+global el
 
 if nargin <2
     dim = 50;
@@ -9,27 +10,70 @@ if nargin <3
     fix_time = .25;
 end
 if nargin < 4
-    pre_delay = .25;
+    pre_delay = .5;
 end
 
+%
+dummy_mode = session.dummy_mode;
+
+% Check Eye:
+eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
+if eye_used == el.BINOCULAR; % if both eyes are tracked
+    eye_used = el.LEFT_EYE; % use left eye
+end
+
+% Prep Screen:
+bg_col = session.background_color;
 imgmat = make_cross(dim, [0 0 0]);
 dest_rect = CenterRect([0 0 dim dim], session.win_rect);
+tex = Screen('MakeTexture', wind, imgmat);
 
 log_msg('Showing fixation cross');
-fix_start = GetSecs();
+
+disp_start = GetSecs();
 while 1
-    tex = Screen('MakeTexture', wind, imgmat);
+    
+    Screen('FillRect', wind, bg_col);
     Screen('DrawTexture', wind, tex, [], dest_rect);
     Screen('Flip',wind);
     
-    %% Change me:
-    if GetSecs() - fix_start > pre_delay
-        [~,~,code] = KbCheck();
-        if max( strcmpi(KbName(code), 'space') ) || max( strcmpi(KbName(code), 'Escape') )
-            break
+    
+    % Get eye position:
+    if dummy_mode
+        [mx,my,~] = GetMouse( wind );
+    else
+        if Eyelink('NewFloatSampleAvailable') > 0
+            % get the sample in the form of an event structure
+            evt = Eyelink( 'NewestFloatSample');
+            % if we do, get current gaze position from sample
+            x = evt.gx(eye_used+1); % +1 as we're accessing MATLAB array
+            y = evt.gy(eye_used+1);
+            % do we have valid data and is the pupil visible?
+            if x~=el.MISSING_DATA && y~=el.MISSING_DATA && evt.pa(eye_used+1)>0
+                mx=x;
+                my=y;
+            else
+                mx=NaN;
+                my=NaN;
+            end
+        else
+            mx=NaN;
+            my=NaN;
         end
     end
-    %%%%
+    
+    % they don't qualify as fixating if
+    if ~IsInRect(mx,my,dest_rect) || ...          % they are not in the rectangle OR
+            (GetSecs() - disp_start < pre_delay)  % the screen just came up
+        last_time_they_werent_fixating = GetSecs();
+    end
+    
+    % end on long enough fixation
+    % disp(mx);
+    if GetSecs() - last_time_they_werent_fixating > fix_time
+        break
+    end
+    
 end
 log_msg('Done showing fixation cross');
 
