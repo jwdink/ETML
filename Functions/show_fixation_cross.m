@@ -40,14 +40,15 @@ while 1
     
     % Get Keypress:
     [~,~,key_code] = KbCheck();
-    if any(key_code)
-        disp(KbName(key_code));
-    end
     if key_code(esc_key) % they press the esc key
         log_msg('Calibration started.');
         EyelinkDoTrackerSetup(el);
         log_msg('Calibration finished.');
-        WaitSecs(.1);
+        while KbCheck; end
+        DrawFormattedText(wind,'When you''re ready to continue press SPACE','center','center');
+        Screen('Flip',wind);
+        KbWait;
+        Eyelink('StartRecording');
         disp_start = GetSecs();
     end
     
