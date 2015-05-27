@@ -15,6 +15,7 @@ end
 
 %
 dummy_mode = session.dummy_mode;
+esc_key = KbName('Escape');
 
 % Check Eye:
 eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
@@ -36,6 +37,19 @@ while 1
     Screen('FillRect', wind, bg_col);
     Screen('DrawTexture', wind, tex, [], dest_rect);
     Screen('Flip',wind);
+    
+    % Get Keypress:
+    [~,~,key_code] = KbCheck();
+    if any(key_code)
+        disp(KbName(key_code));
+    end
+    if key_code(esc_key) % they press the esc key
+        log_msg('Calibration started.');
+        EyelinkDoTrackerSetup(el);
+        log_msg('Calibration finished.');
+        WaitSecs(.1);
+        disp_start = GetSecs();
+    end
     
     
     % Get eye position:
