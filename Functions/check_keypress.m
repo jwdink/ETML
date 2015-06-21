@@ -38,7 +38,8 @@ pressed_keys  = find(key_code_diff > 0);
 for i = 1:length(pressed_keys)
     % Log:
     pressed_key_name = KbName(pressed_keys(i));
-    log_msg(sprintf( 'Key pressed: %s', pressed_key_name ) )
+    pressed_key_name = regexprep(pressed_key_name,'[^a-zA-Z0-9]','');
+    log_msg(sprintf('Key pressed: %s', pressed_key_name ) )
     
     % Remember in struct:
     if ~isempty(key_summary)

@@ -5,6 +5,7 @@ exp_err = [];
 %% LOAD CONFIGURATION %%
 
 PsychJavaTrouble;
+KbName('UnifyKeyNames');
 
 % Global Structs for this session:
 global el
