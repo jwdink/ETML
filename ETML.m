@@ -263,6 +263,10 @@ try
         
         % On Each Phase:
         this_phase_rows = get_rows(stim_config_full, session.condition, this_phase);
+        if isempty(this_phase_rows)
+            error(['It looks like there''s no row in your stim_config.txt corresponding to condition='...
+                num2str(session.condition) ' and phase=' num2str(this_phase')])
+        end
         
         % Calibrate the Eye Tracker?:
         et_calibrate(wind, this_phase)
