@@ -39,7 +39,7 @@ You need to completely customize what happens on each trial, but you want easy m
 
 ### Getting Started
 
-To get started, download this git. The easiest way to get going is simply to copy and paste the "Example" folder, renaming it to your experiment's name. Additionally, make sure you add the ETML folder, as well as the 'Functions' subfolder, to the MATLAB search path.
+To get started, download this git (click "clone in desktop" above). The easiest way to get going is simply to copy and paste the "Example" folder, renaming it to your experiment's name. Additionally, make sure you add the ETML folder, as well as the 'Functions' subfolder, to the MATLAB search path.
 
 ## Getting Set-Up : Config.txt
 
@@ -199,7 +199,7 @@ df_clean = df %>%
 
 - [ ] Doc-style commenting for all functions
 - [ ] More transparent syntax for check_keypress key summary
-- [ ] Add to ReadMe: gettin session data
+- [ ] Add to ReadMe: getting session data
 - [ ] Add to ReadMe: getting eye-tracker data from DataViewer
 - [ ] Add script for common pre-processing steps in R
 
