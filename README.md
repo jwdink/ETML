@@ -178,7 +178,7 @@ ___
 
 Included in this package is an R script that takes a folder of session files, and turns them into a DataFrame in R.
 
-*[This section a work in progress. Using the convert_session_files function should be relatively straightforward, however.]*
+*[This section a work in progress. Using the `convert_session_files` function should be relatively straightforward, however.]*
 
 ### Eye-Tracker Data
 
