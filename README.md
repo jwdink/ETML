@@ -182,7 +182,7 @@ Included in this package is an R script that takes a folder of session files, an
 
 ### Eye-Tracker Data
 
-You can get data from the EDF files, just like any other Eyelink experiment, using Dataviewer. Note that all timestamps--both those made by EyeLink for gaze data, and those made by ETML for keypresses, stim-presentaiton, etc.--are relative to the beginning of the recording on that trial. The columns 'StimStartMS' and 'StimStopMS' should therefore allow you to easily derive a 'TimeInTrial' column. For example, in R:
+You can get data from the EDF files, just like any other Eyelink experiment, using Dataviewer. Note that all timestamps--both those made by EyeLink for gaze data, and those made by ETML for keypresses, stim-presentation, etc.--are relative to the beginning of the recording on that trial. The columns 'StimStartMS' and 'StimStopMS' should therefore allow you to easily derive a 'TimeInTrial' column. For example, in R:
 
 ```
 library('dplyr')
@@ -193,7 +193,7 @@ df_clean = df %>%
            CurrentFixEndTime   = CURRENT_FIX_END   - StimStartMS ) %>%
     filter(CURRENT_FIX_START > StimStartMS, CURRENT_FIX_START < StimStopMS) # filter out everything before and after stim presentation
 ```
-
+And so on for other (e.g., keypress) columns.
 
 # To Do:
 
