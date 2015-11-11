@@ -68,6 +68,8 @@ if isempty(session_info)
         session.subject_code = input('Enter subject code (no longer than 8 chars): ', 's');
         if length(session.subject_code) > 8
             error('Subject code must be no longer than eight characters, or Eyelink will fail.')
+        elseif ~all(isstrprop(session.subject_code, 'alphanum')|(session.subject_code == '_'))
+            error('Subject code can only contain numbers, letters and underscores, or Eyelink will fail.')
         end
         session.condition = str2double( input('Enter condition: ', 's') );
     end
@@ -283,9 +285,6 @@ try
         
         block_index = 0;
         while block_index < length(blocks)
-            if block_index == 0 && this_phase == 2
-                disp('')
-            end
             
             % Get BlockNum:
             % block index is order of presentation
