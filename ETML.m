@@ -8,8 +8,6 @@ PsychJavaTrouble;
 KbName('UnifyKeyNames');
 
 % Global Structs for this session:
-clearvars -global el
-clearvars -global session
 global el
 global session
 
@@ -166,12 +164,7 @@ try
         res = [0, 0, resolution(1), resolution(2)];
         [wind, session.win_rect] = Screen('OpenWindow',max(Screen('Screens')),session.background_color,  res);
     else
-        Screen('Screens')
-        try
-            SetResolution(max(Screen('Screens')),resolution(1),resolution(2),refresh_rate);
-        catch e %#ok<NASGU>
-            log_msg('Setting resolution failed!');
-        end
+        SetResolution(max(Screen('Screens')),resolution(1),resolution(2),refresh_rate);
         [wind, session.win_rect] = Screen('OpenWindow',max(Screen('Screens')),session.background_color );
     end
     

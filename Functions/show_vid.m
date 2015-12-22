@@ -37,7 +37,7 @@ Screen('Close',tex);
 Screen('Flip', wind); Screen('Flip', wind);
 
 % Start playback:
-Screen('PlayMovie', movie , 1);
+Screen('PlayMovie', movie , mov_rate);
 WaitSecs(.10);
 Screen('SetMovieTimeIndex', movie, 0);
 
